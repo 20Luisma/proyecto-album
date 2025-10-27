@@ -1,0 +1,11 @@
+version: "3.8"
+
+services:
+  app:
+    image: php:8.2-cli
+    working_dir: /var/www/html
+    volumes:
+      - ./:/var/www/html
+    command: php -S 0.0.0.0:8080 -t public
+    ports:
+      - "8080:8080"

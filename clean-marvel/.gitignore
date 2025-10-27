@@ -1,0 +1,7 @@
+/vendor
+.phpunit.cache
+build
+storage/*.sqlite
+storage/*.db
+storage/notifications.log
+.DS_Store

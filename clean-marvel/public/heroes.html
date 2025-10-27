@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Clean Marvel Album — Héroes</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Roboto:wght@400;700&display=swap" rel="stylesheet"/>
+  <style>
+    :root { --marvel:#ED1D24; --ink:#0b0d17; --line-w:4px; }
+    body{font-family:'Roboto',sans-serif;background-color:var(--ink);}
+    h1,h2,h3{font-family:'Bangers',cursive;letter-spacing:1.5px}
+
+    /* HERO superior */
+    .app-hero{
+      position:relative;
+      background: radial-gradient(1200px 400px at 10% -10%, rgba(255,255,255,.08), transparent 60%),
+                  linear-gradient(180deg, #151826 0%, #0b0d17 100%);
+      border-bottom: var(--line-w) solid var(--marvel);
+      border-top: var(--line-w) solid var(--marvel);
+    }
+    .app-hero__inner{max-width:80rem;margin:0 auto;padding:2.25rem 1rem;display:flex;flex-direction:column;gap:.5rem}
+    .app-hero__title{color:#fff;font-size:2.25rem;line-height:1}
+    .app-hero__meta{color:#e5e7eb;font-weight:700}
+    .app-badge{
+      display:inline-flex;align-items:center;gap:.5rem;
+      background:var(--marvel);color:#fff;padding:.375rem .75rem;border-radius:.75rem;
+      font-weight:800;letter-spacing:.02em;box-shadow:0 10px 25px rgba(237,29,36,.35)
+    }
+
+    /* Botones base */
+    .btn{display:inline-flex;align-items:center;justify-content:center;gap:.4rem;
+      padding:.55rem .9rem;border-radius:.75rem;font-weight:700;letter-spacing:.01em;
+      box-shadow:0 10px 25px rgba(0,0,0,.25);
+      transition:transform .15s ease,box-shadow .15s ease,background-color .15s ease}
+    .btn:hover{transform:translateY(-1px);box-shadow:0 18px 30px rgba(0,0,0,.35)}
+    .btn:disabled{opacity:.6;cursor:not-allowed;box-shadow:none;transform:none}
+    .btn-primary{background-color:var(--marvel);color:#fff}
+    .btn-primary:hover{background-color:#c5161c}
+    .btn-secondary{background-color:#374151;color:#f8fafc}
+    .btn-secondary:hover{background-color:#4b5563}
+    .btn-danger{background-color:#b91c1c;color:#f8fafc}
+    .btn-danger:hover{background-color:#991b1b}
+    .btn-link{color:#f59e0b;font-weight:600}
+    .btn-link:hover{color:#fbbf24;text-decoration:underline}
+
+    /* Tarjetas */
+    .card{background-color:rgba(30,41,59,.9);border:1px solid #334155}
+    .section-lined{border-top: var(--line-w) solid var(--marvel);} /* línea roja superior */
+
+    /* Collapsible */
+    .fade-mask{pointer-events:none;position:absolute;inset-inline:0;bottom:0;height:2rem;
+      background:linear-gradient(to top, #0b0f1a, transparent)}
+
+    /* Mensajes */
+    .msg-hidden{height:1.25rem}
+  </style>
+</head>
+<body class="text-gray-200 min-h-screen bg-[#0b0d17]">
+
+  <!-- HERO / HEADER -->
+  <header class="app-hero">
+    <div class="app-hero__inner">
+      <div class="flex items-center justify-between">
+        <h1 class="app-hero__title">Héroes del Álbum</h1>
+        <a href="/albums.html" class="btn btn-secondary text-sm">⬅️ Volver a Álbumes</a>
+      </div>
+      <div class="flex items-center gap-3">
+        <span class="app-badge">Clean&nbsp;Marvel&nbsp;Album</span>
+        <p id="album-meta" class="app-hero__meta"></p>
+      </div>
+    </div>
+  </header>
+
+  <div class="max-w-7xl mx-auto py-8 px-4 space-y-8">
+    <!-- GRID: Aside a la izquierda, Main a la derecha -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <!-- ASIDE IZQUIERDA: Añadir Héroe + Actividad -->
+      <aside class="lg:col-span-1 self-start space-y-6">
+        <section class="card section-lined rounded-2xl p-6 shadow-xl">
+          <h2 class="text-3xl text-white mb-4">Añadir Héroe</h2>
+          <form id="hero-form" class="space-y-4">
+            <div class="grid grid-cols-1 gap-4">
+              <input id="hero-name" class="w-full px-4 py-3 rounded-lg bg-slate-700 border border-slate-600 focus:border-[var(--marvel)] focus:ring-0 focus:outline-none text-white" type="text" placeholder="Nombre del Héroe" required>
+              <input id="hero-image" class="w-full px-4 py-3 rounded-lg bg-slate-700 border border-slate-600 focus:border-[var(--marvel)] focus:ring-0 focus:outline-none text-white" type="url" placeholder="URL de la Imagen" required>
+            </div>
+            <textarea id="hero-content" class="w-full px-4 py-3 rounded-lg bg-slate-700 border border-slate-600 focus:border-[var(--marvel)] focus:ring-0 focus:outline-none text-white resize-none min-h-24" rows="3" placeholder="Biografía del Héroe"></textarea>
+            <button class="btn btn-primary w-full" type="submit">¡Añadir Héroe!</button>
+          </form>
+          <p id="hero-message" class="text-sm mt-4 hidden msg-hidden"></p>
+        </section>
+
+        <!-- AVISADOR DE ACTIVIDAD: solo la más reciente, con navegación -->
+        <section class="card section-lined rounded-2xl p-6 shadow-xl">
+          <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
+            <h2 class="text-3xl text-white">🔔 Actividad</h2>
+            <div class="flex items-center gap-2">
+              <button id="activity-prev" class="btn btn-secondary text-xs">⟵ Anterior</button>
+              <button id="activity-next" class="btn btn-secondary text-xs">Siguiente ⟶</button>
+              <button id="clear-hero-activity" class="btn btn-danger text-xs">Limpiar</button>
+            </div>
+          </div>
+
+          <div id="hero-activity-empty" class="bg-slate-900/70 border border-slate-700 rounded-xl p-4 text-sm text-gray-300 italic">
+            No hay actividad registrada.
+          </div>
+
+          <!-- Vista de 1 sola entrada -->
+          <div id="hero-activity-view" class="hidden bg-slate-900/80 border border-slate-700 rounded-xl p-4 space-y-2">
+            <div class="flex items-center justify-between">
+              <span id="hero-activity-tag" class="inline-flex items-center px-2 py-1 rounded-md text-[0.65rem] font-black uppercase tracking-[0.18em] border">
+                —
+              </span>
+              <div class="flex items-center gap-2 text-xs text-gray-400">
+                <time id="hero-activity-date" class="font-mono text-amber-300/80">—</time>
+                <span id="hero-activity-counter">0/0</span>
+              </div>
+            </div>
+            <p id="hero-activity-title" class="text-sm text-gray-100 leading-tight">—</p>
+          </div>
+        </section>
+      </aside>
+
+      <!-- MAIN DERECHA: Galería -->
+      <main class="lg:col-span-2 space-y-8">
+        <!-- Línea roja arriba -->
+        <section class="card section-lined rounded-2xl p-6 shadow-xl">
+          <!-- Encabezado de galería con contador + filtros + orden -->
+          <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div class="flex items-center gap-3">
+              <h2 class="text-3xl text-white">Galería de Héroes</h2>
+              <span id="heroes-counter" class="inline-flex items-center px-2 py-1 rounded-lg text-xs font-bold bg-slate-700 text-gray-100 border border-slate-600">
+                0 héroes
+              </span>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 w-full sm:w-auto">
+              <div class="sm:col-span-2">
+                <label class="block text-xs text-gray-400 mb-1">Buscar (nombre o biografía)</label>
+                <input id="filter-q" type="search" placeholder="Ej: spider, wakanda, mutante..."
+                  class="w-full px-3 py-2 rounded-lg bg-slate-700 border border-slate-600 focus:border-[var(--marvel)] focus:ring-0 focus:outline-none text-white" />
+              </div>
+              <div>
+                <label class="block text-xs text-gray-400 mb-1">Ordenar</label>
+                <select id="filter-order"
+                  class="w-full px-3 py-2 rounded-lg bg-slate-700 border border-slate-600 focus:border-[var(--marvel)] focus:ring-0 focus:outline-none text-white">
+                  <option value="az">A → Z</option>
+                  <option value="za">Z → A</option>
+                  <option value="recent">Recientes</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div id="heroes-grid" class="grid gap-5 sm:grid-cols-2 xl:grid-cols-3"></div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer class="mt-10 border-t-[var(--line-w)] border-t-[var(--marvel)]/80 text-center text-xs text-gray-400 py-6">
+    © creawebes 2025
+  </footer>
+
+  <script>
+    // ====== Parámetros e init ======
+    const params = new URLSearchParams(window.location.search);
+    const albumId = params.get('albumId');
+    const albumNameParam = params.get('albumName');
+    if (!albumId || !albumNameParam) window.location.href = '/albums.html';
+
+    const albumNombre = albumNameParam || '';
+    document.getElementById('album-meta').textContent = `Álbum: ${albumNombre}`;
+
+    // ====== Refs UI ======
+    const heroForm = document.getElementById('hero-form');
+    const heroMessage = document.getElementById('hero-message');
+    const heroesGrid = document.getElementById('heroes-grid');
+    const heroNameInput = document.getElementById('hero-name');
+    const heroImageInput = document.getElementById('hero-image');
+    const heroContentInput = document.getElementById('hero-content');
+
+    // Filtros
+    const filterInput = document.getElementById('filter-q');
+    const orderSelect = document.getElementById('filter-order');
+    const heroesCounter = document.getElementById('heroes-counter');
+
+    // ====== Actividad (una sola visible con navegación) ======
+    const heroActivityEmpty = document.getElementById('hero-activity-empty');
+    const heroActivityView  = document.getElementById('hero-activity-view');
+    const clearHeroActivityButton = document.getElementById('clear-hero-activity');
+    const activityPrevBtn = document.getElementById('activity-prev');
+    const activityNextBtn = document.getElementById('activity-next');
+
+    const tagEl   = document.getElementById('hero-activity-tag');
+    const dateEl  = document.getElementById('hero-activity-date');
+    const countEl = document.getElementById('hero-activity-counter');
+    const titleEl = document.getElementById('hero-activity-title');
+
+    // Estado
+    let heroesAll = [];
+    let heroesFiltered = [];
+
+    // ====== Auto-resize textarea ======
+    attachAutoResize(heroContentInput);
+    function autoResizeTextarea(textarea) {
+      textarea.style.height = 'auto';
+      textarea.style.height = `${textarea.scrollHeight}px`;
+    }
+    function attachAutoResize(textarea) {
+      if (!textarea) return;
+      textarea.addEventListener('input', () => autoResizeTextarea(textarea));
+      autoResizeTextarea(textarea);
+    }
+
+    // ====== Utils ======
+    function showMessage(element, message, isError = false) {
+      element.textContent = message;
+      element.classList.remove('hidden');
+      element.classList.toggle('text-green-400', !isError);
+      element.classList.toggle('text-red-500', isError);
+      setTimeout(() => element.classList.add('hidden'), 4000);
+    }
+    function debounce(fn, ms=200){ let t; return (...args)=>{ clearTimeout(t); t=setTimeout(()=>fn(...args), ms); }; }
+    function normalize(s){
+      return (s ?? '').toString().toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu,'');
+    }
+
+    const COLLAPSED_CONTENT_MAX_HEIGHT = '6rem';
+
+    // ====== Event Bus + Activity (persistente por álbum) ======
+    const heroesEventBus = new EventTarget();
+    const ACTIVITY_COLORS = {
+      CREADO: 'text-emerald-400 border-emerald-500/40',
+      EDITADO: 'text-sky-400 border-sky-500/40',
+      ELIMINADO: 'text-rose-400 border-rose-500/40'
+    };
+    const activityDateFormatter = typeof Intl !== 'undefined'
+      ? new Intl.DateTimeFormat('es-ES', { dateStyle: 'short', timeStyle: 'short' })
+      : null;
+
+    const HERO_ACTIVITY_STORAGE_KEY = `clean-marvel:heroes:activity-log:${albumId}`;
+    let heroActivityLog = loadHeroActivityFromStorage();
+    let activityIndex = 0; // 0 = más reciente
+
+    function loadHeroActivityFromStorage() {
+      if (typeof window === 'undefined' || !window.localStorage) return [];
+      try {
+        const raw = window.localStorage.getItem(HERO_ACTIVITY_STORAGE_KEY);
+        if (!raw) return [];
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed) ? parsed.slice(0, 100) : [];
+      } catch (_) { return []; }
+    }
+    function persistHeroActivity() {
+      if (typeof window === 'undefined' || !window.localStorage) return;
+      try {
+        window.localStorage.setItem(HERO_ACTIVITY_STORAGE_KEY, JSON.stringify(heroActivityLog));
+      } catch (_) {}
+    }
+    function formatActivityTimestamp(ts) {
+      try {
+        const d = new Date(ts);
+        if (Number.isNaN(d.getTime())) return '—';
+        return activityDateFormatter ? activityDateFormatter.format(d) : d.toLocaleString();
+      } catch (_) { return '—'; }
+    }
+    function extractHeroTitle(detail) {
+      if (!detail) return 'Héroe';
+      if (typeof detail === 'string') return detail || 'Héroe';
+      if (detail.hero && typeof detail === 'object') return extractHeroTitle(detail.hero);
+      return detail.nombre || detail.name || 'Héroe';
+    }
+    function appendHeroActivity(action, detail) {
+      const entry = {
+        action,
+        title: extractHeroTitle(detail),
+        timestamp: new Date().toISOString()
+      };
+      // Insertar como más reciente
+      heroActivityLog = [entry, ...heroActivityLog].slice(0, 100);
+      persistHeroActivity();
+      activityIndex = 0; // mostrar siempre la más reciente
+      renderHeroActivityView();
+    }
+
+    function renderHeroActivityView() {
+      const total = heroActivityLog.length;
+      if (total === 0) {
+        heroActivityEmpty.classList.remove('hidden');
+        heroActivityView.classList.add('hidden');
+        activityPrevBtn.disabled = true;
+        activityNextBtn.disabled = true;
+        return;
+      }
+      if (activityIndex < 0) activityIndex = 0;
+      if (activityIndex > total - 1) activityIndex = total - 1;
+
+      const entry = heroActivityLog[activityIndex];
+
+      // Tag de acción con color
+      tagEl.textContent = entry.action;
+      tagEl.className = [
+        'inline-flex items-center px-2 py-1 rounded-md text-[0.65rem] font-black uppercase tracking-[0.18em] border',
+        ACTIVITY_COLORS[entry.action] || 'text-gray-200 border-slate-600'
+      ].join(' ');
+
+      dateEl.textContent = formatActivityTimestamp(entry.timestamp);
+      countEl.textContent = `${activityIndex + 1}/${total}`;
+      titleEl.textContent = entry.title;
+
+      heroActivityEmpty.classList.add('hidden');
+      heroActivityView.classList.remove('hidden');
+
+      activityPrevBtn.disabled = (activityIndex === 0);           // no hay más recientes
+      activityNextBtn.disabled = (activityIndex >= total - 1);    // no hay más antiguas
+    }
+
+    // Controles Anterior / Siguiente
+    activityPrevBtn.addEventListener('click', () => {
+      // Ir hacia más reciente -> índice -1 (siempre top clamp a 0)
+      activityIndex = Math.max(0, activityIndex - 1);
+      renderHeroActivityView();
+    });
+    activityNextBtn.addEventListener('click', () => {
+      // Ir hacia más antigua -> índice +1
+      activityIndex = Math.min(heroActivityLog.length - 1, activityIndex + 1);
+      renderHeroActivityView();
+    });
+
+    clearHeroActivityButton?.addEventListener('click', () => {
+      if (!heroActivityLog.length) return;
+      heroActivityLog = [];
+      persistHeroActivity();
+      renderHeroActivityView();
+      showMessage(heroMessage, 'Registro de actividad vacío.');
+    });
+
+    // Disparadores desde acciones
+    heroesEventBus.addEventListener('hero:created', (ev)=>appendHeroActivity('CREADO', ev?.detail));
+    heroesEventBus.addEventListener('hero:updated', (ev)=>appendHeroActivity('EDITADO', ev?.detail));
+    heroesEventBus.addEventListener('hero:deleted', (ev)=>appendHeroActivity('ELIMINADO', ev?.detail));
+
+    // ====== Galería (cards) ======
+    function buildHeroCard(hero) {
+      const card = document.createElement('article');
+      card.className = 'bg-slate-800 rounded-2xl overflow-hidden border border-slate-700 hover:border-[var(--marvel)] transition-transform duration-300 flex flex-col transform hover:-translate-y-1 shadow-lg';
+      card.dataset.heroId = hero.id ?? hero.heroId ?? hero.uuid ?? '';
+
+      const image = document.createElement('img');
+      image.className = 'w-full h-48 object-cover';
+      image.src = hero.imagen;
+      image.alt = hero.nombre;
+
+      const body = document.createElement('div');
+      body.className = 'p-4 flex-1 flex flex-col space-y-3';
+
+      const heading = document.createElement('h3');
+      heading.className = 'text-2xl text-white';
+      heading.textContent = hero.nombre;
+
+      const contentWrapper = document.createElement('div');
+      contentWrapper.className = 'relative';
+
+      const content = document.createElement('div');
+      content.className = 'hero-content text-sm text-gray-300 whitespace-pre-wrap break-words transition-all duration-200 overflow-hidden';
+      content.dataset.collapsible = 'true';
+      content.dataset.collapsed = 'true';
+      content.style.maxHeight = COLLAPSED_CONTENT_MAX_HEIGHT;
+      content.textContent = hero.contenido && hero.contenido.trim() !== '' ? hero.contenido : 'Sin descripción.';
+
+      const fade = document.createElement('div');
+      fade.className = 'fade-mask';
+      fade.dataset.collapsibleFade = 'true';
+
+      contentWrapper.append(content, fade);
+
+      const toggleButton = document.createElement('button');
+      toggleButton.type = 'button';
+      toggleButton.className = 'toggle-content-btn btn-link text-sm self-start';
+      toggleButton.textContent = 'Ver más';
+
+      const actionsRow = document.createElement('div');
+      actionsRow.className = 'mt-2 flex flex-wrap items-center gap-2';
+
+      const editButton = document.createElement('button');
+      editButton.type = 'button';
+      editButton.className = 'edit-hero-btn btn btn-secondary flex-1 min-w-[120px]';
+      editButton.textContent = 'Editar';
+
+      const deleteButton = document.createElement('button');
+      deleteButton.type = 'button';
+      deleteButton.className = 'delete-hero-btn btn btn-danger flex-1 min-w-[120px]';
+      deleteButton.dataset.heroId = hero.id ?? hero.heroId ?? hero.uuid ?? '';
+      deleteButton.dataset.heroName = hero.nombre;
+      deleteButton.textContent = 'Eliminar';
+
+      const editForm = document.createElement('form');
+      editForm.className = 'hero-edit-form hidden mt-3 space-y-3 bg-slate-900/70 border border-slate-700 rounded-xl p-4';
+
+      const editNameInput = document.createElement('input');
+      editNameInput.className = 'w-full px-3 py-2 rounded-lg bg-slate-700 border border-slate-600 focus:border-[var(--marvel)] focus:ring-0 focus:outline-none text-white';
+      editNameInput.setAttribute('data-edit-field', 'nombre');
+      editNameInput.required = true;
+
+      const editImageInput = document.createElement('input');
+      editImageInput.className = 'w-full px-3 py-2 rounded-lg bg-slate-700 border border-slate-600 focus:border-[var(--marvel)] focus:ring-0 focus:outline-none text-white';
+      editImageInput.type = 'url';
+      editImageInput.setAttribute('data-edit-field', 'imagen');
+      editImageInput.required = true;
+
+      const editContentTextarea = document.createElement('textarea');
+      editContentTextarea.className = 'w-full px-3 py-2 rounded-lg bg-slate-700 border border-slate-600 focus:border-[var(--marvel)] focus:ring-0 focus:outline-none text-white resize-none min-h-24';
+      editContentTextarea.rows = 3;
+      editContentTextarea.setAttribute('data-edit-field', 'contenido');
+
+      const editButtonsRow = document.createElement('div');
+      editButtonsRow.className = 'flex flex-wrap items-center gap-2';
+
+      const saveEditButton = document.createElement('button');
+      saveEditButton.type = 'submit';
+      saveEditButton.className = 'btn btn-primary flex-1 min-w-[120px]';
+      saveEditButton.textContent = 'Guardar';
+
+      const cancelEditButton = document.createElement('button');
+      cancelEditButton.type = 'button';
+      cancelEditButton.className = 'cancel-hero-edit-btn btn btn-secondary flex-1 min-w-[120px]';
+      cancelEditButton.textContent = 'Cancelar';
+
+      const editMessage = document.createElement('p');
+      editMessage.className = 'hero-edit-message text-sm hidden';
+
+      actionsRow.append(editButton, deleteButton);
+      editButtonsRow.append(saveEditButton, cancelEditButton);
+      editForm.append(editNameInput, editImageInput, editContentTextarea, editButtonsRow, editMessage);
+
+      body.append(heading, contentWrapper, toggleButton, actionsRow, editForm);
+      card.appendChild(image);
+      card.appendChild(body);
+
+      return card;
+    }
+
+    function setupHeroCardCollapsible(card) {
+      const content = card.querySelector('[data-collapsible="true"]');
+      const fade = card.querySelector('[data-collapsible-fade="true"]');
+      const toggleButton = card.querySelector('.toggle-content-btn');
+      if (!content || !fade || !toggleButton) return;
+
+      const collapse = () => {
+        content.style.maxHeight = COLLAPSED_CONTENT_MAX_HEIGHT;
+        content.dataset.collapsed = 'true';
+        fade.classList.remove('hidden');
+        toggleButton.textContent = 'Ver más';
+      };
+      const expand = () => {
+        content.style.maxHeight = 'none';
+        content.dataset.collapsed = 'false';
+        fade.classList.add('hidden');
+        toggleButton.textContent = 'Ver menos';
+      };
+      const evaluateOverflow = () => {
+        collapse();
+        requestAnimationFrame(() => {
+          const hasOverflow = content.scrollHeight > content.offsetHeight + 1;
+          if (!hasOverflow) {
+            content.style.maxHeight = 'none';
+            content.dataset.collapsed = 'false';
+            fade.classList.add('hidden');
+            toggleButton.classList.add('hidden');
+          } else {
+            toggleButton.classList.remove('hidden');
+          }
+        });
+      };
+      toggleButton.addEventListener('click', () => {
+        if (toggleButton.classList.contains('hidden')) return;
+        if (content.dataset.collapsed === 'true') expand(); else collapse();
+      });
+      evaluateOverflow();
+    }
+
+    function setupHeroEditForm(card, hero) {
+      let currentHero = { ...hero };
+      const editButton = card.querySelector('.edit-hero-btn');
+      const editForm = card.querySelector('.hero-edit-form');
+      if (!editButton || !editForm) return;
+
+      const nameInput = editForm.querySelector('[data-edit-field="nombre"]');
+      const imageInput = editForm.querySelector('[data-edit-field="imagen"]');
+      const contentTextarea = editForm.querySelector('[data-edit-field="contenido"]');
+      const cancelButton = editForm.querySelector('.cancel-hero-edit-btn');
+      const message = editForm.querySelector('.hero-edit-message');
+
+      attachAutoResize(contentTextarea);
+
+      const populateForm = (heroData) => {
+        if (!heroData) return;
+        nameInput.value = heroData.nombre;
+        imageInput.value = heroData.imagen;
+        contentTextarea.value = heroData.contenido ?? '';
+        autoResizeTextarea(contentTextarea);
+        message.classList.add('hidden');
+      };
+
+      populateForm(currentHero);
+
+      editButton.addEventListener('click', () => {
+        if (editForm.classList.contains('hidden')) {
+          populateForm(currentHero);
+          editForm.classList.remove('hidden');
+          contentTextarea.focus();
+        } else {
+          editForm.classList.add('hidden');
+        }
+      });
+
+      cancelButton.addEventListener('click', () => {
+        editForm.classList.add('hidden');
+        populateForm(currentHero);
+      });
+
+      editForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+
+        const nuevoNombre = nameInput.value.trim();
+        const nuevaImagen = imageInput.value.trim();
+        const nuevoContenido = contentTextarea.value.trim();
+
+        if (!nuevoNombre || !nuevaImagen) {
+          showMessage(message, 'Nombre e imagen son obligatorios.', true);
+          return;
+        }
+
+        const payload = { nombre: nuevoNombre, imagen: nuevaImagen, contenido: nuevoContenido };
+
+        try {
+          const response = await fetch(`/heroes/${encodeURIComponent(hero.id ?? hero.heroId ?? hero.uuid ?? '')}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          const result = await response.json();
+          if (!response.ok || result.estado !== 'éxito') {
+            throw new Error(result.message || 'No se pudo actualizar el héroe.');
+          }
+
+          currentHero = { ...currentHero, ...payload };
+          showMessage(heroMessage, `Héroe "${nuevoNombre}" actualizado.`);
+
+          heroesEventBus.dispatchEvent(new CustomEvent('hero:updated', {
+            detail: { hero: currentHero, nombre: currentHero.nombre }
+          }));
+
+          editForm.classList.add('hidden');
+          message.classList.add('hidden');
+          await fetchHeroes(albumId);
+        } catch (error) {
+          showMessage(message, error.message, true);
+        }
+      });
+    }
+
+    // ====== Filtros / Orden ======
+    function applyFilters(){
+      const q = normalize(filterInput?.value || '');
+
+      heroesFiltered = heroesAll.filter(h=>{
+        if(!q) return true;
+        return normalize(h.nombre).includes(q) || normalize(h.contenido).includes(q);
+      });
+
+      const ord = orderSelect?.value || 'az';
+      heroesFiltered.sort((a,b)=>{
+        if(ord==='recent'){
+          const ka = a.createdAt ?? a.fecha ?? a.heroId ?? a.id ?? 0;
+          const kb = b.createdAt ?? b.fecha ?? b.heroId ?? b.id ?? 0;
+          return (kb > ka) ? 1 : (kb < ka) ? -1 : 0;
+        }
+        const an = (a.nombre || '').toLowerCase();
+        const bn = (b.nombre || '').toLowerCase();
+        if(ord==='za') return an < bn ? 1 : an > bn ? -1 : 0;
+        return an > bn ? 1 : an < bn ? -1 : 0;
+      });
+
+      renderHeroes();
+    }
+
+    function renderHeroes(){
+      const total = heroesAll.length;
+      const visib = heroesFiltered.length;
+      if (heroesCounter){
+        heroesCounter.textContent = total === visib ? `${visib} héroes` : `${visib}/${total} héroes`;
+      }
+
+      if (heroesFiltered.length === 0){
+        heroesGrid.innerHTML = '<p class="text-gray-400 col-span-full text-center py-10 italic">No hay héroes que coincidan con la búsqueda.</p>';
+        return;
+      }
+
+      heroesGrid.innerHTML = '';
+      heroesFiltered.forEach(hero=>{
+        const card = buildHeroCard(hero);
+        heroesGrid.appendChild(card);
+        setupHeroCardCollapsible(card);
+        setupHeroEditForm(card, hero);
+      });
+    }
+
+    // ====== Borrado robusto ======
+    async function deleteHeroById(heroId, albumId) {
+      const endpoints = [
+        `/heroes/${encodeURIComponent(heroId)}`,
+        `/albums/${encodeURIComponent(albumId)}/heroes/${encodeURIComponent(heroId)}`
+      ];
+      let lastError;
+      for (const url of endpoints) {
+        try {
+          const res = await fetch(url, { method: 'DELETE' });
+          const json = await res.json().catch(() => ({}));
+          if (res.ok && (json.estado === 'éxito' || json.ok === true)) {
+            return { ok: true, message: json?.datos?.message || json?.message || 'Héroe eliminado.' };
+          }
+          lastError = new Error(json?.message || `Fallo en ${url}`);
+        } catch (e) {
+          lastError = e;
+        }
+      }
+      throw lastError || new Error('No se pudo eliminar el héroe.');
+    }
+
+    // ====== Carga de héroes ======
+    async function fetchHeroes(albumId) {
+      try {
+        const response = await fetch(`/albums/${encodeURIComponent(albumId)}/heroes`);
+        if (!response.ok) throw new Error('Error al cargar héroes.');
+        const payload = await response.json();
+        if (payload.estado !== 'éxito') throw new Error(payload.message || 'No se pudieron cargar los héroes.');
+
+        const heroes = Array.isArray(payload.datos) ? payload.datos : [];
+        heroesAll = heroes;
+        applyFilters();
+      } catch (error) {
+        showMessage(heroMessage, error.message, true);
+      }
+    }
+
+    // ====== Eventos ======
+    heroForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const payload = {
+        nombre: heroNameInput.value.trim(),
+        contenido: heroContentInput.value.trim(),
+        imagen: heroImageInput.value.trim()
+      };
+      if (!payload.nombre || !payload.imagen) {
+        showMessage(heroMessage, 'Nombre e imagen son obligatorios.', true);
+        return;
+      }
+      try {
+        const response = await fetch(`/albums/${encodeURIComponent(albumId)}/heroes`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const result = await response.json();
+        if (result.estado !== 'éxito') throw new Error(result.message || 'No se pudo crear el héroe.');
+        const datos = result.datos && typeof result.datos === 'object' ? result.datos : {};
+
+        showMessage(heroMessage, `Héroe "${datos.nombre ?? payload.nombre}" creado.`);
+        heroForm.reset();
+        autoResizeTextarea(heroContentInput);
+
+        heroesEventBus.dispatchEvent(new CustomEvent('hero:created', {
+          detail: { hero: datos, nombre: datos?.nombre ?? payload.nombre }
+        }));
+
+        await fetchHeroes(albumId);
+      } catch (error) {
+        showMessage(heroMessage, error.message, true);
+      }
+    });
+
+    // Eliminar héroe (delegado)
+    heroesGrid.addEventListener('click', async (event) => {
+      const btn = event.target.closest('button.delete-hero-btn');
+      if (!btn) return;
+
+      let heroId = btn.dataset.heroId;
+      if (!heroId) {
+        const card = btn.closest('[data-hero-id]');
+        heroId = card?.dataset?.heroId || '';
+      }
+      const heroName = btn.dataset.heroName || 'el héroe';
+
+      if (!heroId) {
+        showMessage(heroMessage, 'No encuentro el ID del héroe.', true);
+        return;
+      }
+
+      if (!confirm(`¿Seguro que quieres eliminar a ${heroName}?`)) return;
+
+      try {
+        const { ok, message } = await deleteHeroById(heroId, albumId);
+        if (!ok) throw new Error(message || 'No se pudo eliminar el héroe.');
+        showMessage(heroMessage, message || 'Héroe eliminado.');
+
+        heroesEventBus.dispatchEvent(new CustomEvent('hero:deleted', {
+          detail: { nombre: heroName, heroId }
+        }));
+
+        await fetchHeroes(albumId);
+      } catch (error) {
+        showMessage(heroMessage, error.message || 'Error al eliminar.', true);
+      }
+    });
+
+    // Filtros
+    filterInput?.addEventListener('input', debounce(applyFilters, 200));
+    orderSelect?.addEventListener('change', applyFilters);
+
+    // ====== Init ======
+    renderHeroActivityView(); // pintar estado inicial (por si hay log previo)
+    fetchHeroes(albumId);
+  </script>
+</body>
+</html>
