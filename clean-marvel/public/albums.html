@@ -12,6 +12,20 @@
     :root { --marvel:#ED1D24; --ink:#0b0d17; --line-w:4px; }
     body{font-family:'Roboto',sans-serif;background-color:var(--ink);}
     h1,h2,h3{font-family:'Bangers',cursive;letter-spacing:1.5px}
+    .test-item-title{
+      display:-webkit-box;
+      -webkit-line-clamp:2;
+      -webkit-box-orient:vertical;
+      overflow:hidden;
+      white-space:normal;
+      word-break:break-word;
+      overflow-wrap:anywhere;
+    }
+    .test-item-path{
+      white-space:normal;
+      word-break:break-word;
+      overflow-wrap:anywhere;
+    }
 
     /* HERO superior */
     .app-hero{
@@ -124,6 +138,38 @@
             <p id="album-activity-title" class="text-sm text-gray-100 leading-tight">—</p>
           </div>
         </section>
+
+        <section id="tests-box" class="card section-lined rounded-2xl p-6 shadow-xl space-y-4">
+          <div class="flex items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+              <h2 class="text-3xl text-white">🧪 Tests</h2>
+              <span id="test-status-chip" class="hidden inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[0.7rem] font-black uppercase tracking-[0.18em] leading-none border border-slate-500/40 bg-slate-800/80 text-slate-200 shadow-sm transition-colors duration-150">—</span>
+            </div>
+            <button id="tests-toggle" type="button" role="button" class="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[0.7rem] font-black uppercase tracking-[0.18em] leading-none border border-slate-500/40 bg-slate-800/80 text-slate-200 shadow-sm transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-emerald-300/30" aria-expanded="true" aria-controls="tests-box">
+              <span class="tests-toggle-label">Ocultar tests</span>
+              <svg class="tests-toggle-icon h-3.5 w-3.5 opacity-90 transition-transform duration-150 transform rotate-0" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.939l3.71-3.71a.75.75 0 111.06 1.061l-4.24 4.243a.75.75 0 01-1.06 0L5.21 8.27a.75.75 0 01.02-1.06z" clip-rule="evenodd"/>
+              </svg>
+            </button>
+          </div>
+          <div id="tests-body" class="space-y-4">
+            <p class="text-sm text-slate-300 leading-relaxed">
+              Ejecuta la batería de PHPUnit y revisa los resultados en tiempo real sin salir del panel.
+            </p>
+            <button id="run-tests-btn" class="btn btn-secondary w-full">
+              ▶ Ejecutar tests
+            </button>
+            <p id="test-runner-message" class="hidden text-sm font-semibold"></p>
+            <div id="tests-summary" class="hidden space-y-4">
+              <div id="test-summary-grid" class="grid grid-cols-2 gap-3 text-sm"></div>
+              <div id="test-status-breakdown" class="flex flex-wrap gap-2 text-xs"></div>
+              <div class="space-y-2 relative">
+                <h3 class="text-xs font-semibold tracking-[0.28em] uppercase text-slate-300 relative z-10">Resultados por test</h3>
+                <div id="tests-tbody" class="relative z-10 pr-1 sm:pr-2 pt-2 pb-8 space-y-4"></div>
+              </div>
+            </div>
+          </div>
+        </section>
       </aside>
 
       <!-- MAIN DERECHA: Mis Álbumes -->
@@ -193,6 +239,16 @@
     const dateEl  = document.getElementById('album-activity-date');
     const countEl = document.getElementById('album-activity-counter');
     const titleEl = document.getElementById('album-activity-title');
+    const testsBox = document.getElementById('tests-box');
+    const testsBody = document.getElementById('tests-body');
+    const testsToggle = document.getElementById('tests-toggle');
+    const testRunButton = document.getElementById('run-tests-btn');
+    const testRunnerMessage = document.getElementById('test-runner-message');
+    const testsSummary = document.getElementById('tests-summary');
+    const testSummaryGrid = document.getElementById('test-summary-grid');
+    const testStatusBreakdown = document.getElementById('test-status-breakdown');
+    const testsTbody = document.getElementById('tests-tbody');
+    const testStatusChip = document.getElementById('test-status-chip');
 
     // Estado
     let albumsAll = [];
@@ -206,6 +262,55 @@
       CREADO: 'text-emerald-400 border-emerald-500/40',
       EDITADO: 'text-sky-400 border-sky-500/40',
       ELIMINADO: 'text-rose-400 border-rose-500/40'
+    };
+    const TESTS_PANEL_STORAGE_KEY = 'clean-marvel:albums:testsPanelCollapsed';
+    const TEST_STATUS_LABELS = {
+      passed: 'OK',
+      failed: 'Falló',
+      error: 'Error',
+      skipped: 'Omitido',
+      running: 'En progreso',
+      info: 'Info'
+    };
+    const TEST_STATUS_ICONS = {
+      passed: '✅',
+      failed: '⚠️',
+      error: '⛔',
+      skipped: '⏭️',
+      running: '⏳',
+      info: 'ℹ️'
+    };
+    const TEST_STATUS_STYLES = {
+      passed: {
+        chip: 'bg-emerald-500/10 border-emerald-500/40 text-emerald-300',
+        message: 'text-emerald-300',
+        badge: 'border border-emerald-500/40 bg-emerald-500/10 text-emerald-200'
+      },
+      failed: {
+        chip: 'bg-amber-500/10 border-amber-500/40 text-amber-200',
+        message: 'text-amber-300',
+        badge: 'border border-amber-500/40 bg-amber-500/10 text-amber-200'
+      },
+      error: {
+        chip: 'bg-rose-500/10 border-rose-500/40 text-rose-200',
+        message: 'text-rose-300',
+        badge: 'border border-rose-500/40 bg-rose-500/10 text-rose-200'
+      },
+      skipped: {
+        chip: 'bg-slate-500/10 border-slate-500/40 text-slate-200',
+        message: 'text-slate-300',
+        badge: 'border border-slate-500/40 bg-slate-500/10 text-slate-200'
+      },
+      running: {
+        chip: 'bg-sky-500/10 border-sky-500/40 text-sky-200',
+        message: 'text-sky-300',
+        badge: 'border border-sky-500/40 bg-sky-500/10 text-sky-200'
+      },
+      info: {
+        chip: 'bg-slate-500/10 border-slate-500/40 text-slate-200',
+        message: 'text-slate-300',
+        badge: 'border border-slate-500/40 bg-slate-500/10 text-slate-200'
+      }
     };
     const albumEventBus = new EventTarget();
     const activityDateFormatter = typeof Intl !== 'undefined'
@@ -224,6 +329,347 @@
     function debounce(fn, ms=200){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), ms); }; }
     function normalize(s){
       return (s ?? '').toString().toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu,'');
+    }
+
+    function formatNumber(value) {
+      const numeric = Number(value);
+      if (!Number.isFinite(numeric)) return '0';
+      return numeric.toLocaleString('es-ES');
+    }
+
+    function formatSeconds(value) {
+      const numeric = Number(value);
+      if (!Number.isFinite(numeric)) return '0.000s';
+      return `${numeric.toFixed(3)}s`;
+    }
+
+    function resetTestResults() {
+      testsSummary?.classList.add('hidden');
+      testSummaryGrid?.replaceChildren();
+      testStatusBreakdown?.replaceChildren();
+      testsTbody?.replaceChildren();
+      if (testStatusBreakdown) {
+        testStatusBreakdown.classList.add('hidden');
+      }
+      if (testStatusChip) {
+        testStatusChip.classList.add('hidden');
+      }
+    }
+
+    function renderTestMessage(text, status = 'info') {
+      if (!testRunnerMessage) return;
+      if (!text) {
+        testRunnerMessage.classList.add('hidden');
+        return;
+      }
+      const style = TEST_STATUS_STYLES[status] ?? TEST_STATUS_STYLES.info;
+      testRunnerMessage.textContent = text;
+      testRunnerMessage.className = `text-sm font-semibold leading-tight ${style.message}`;
+      testRunnerMessage.classList.remove('hidden');
+    }
+
+    function setTestStatusChip(status, totalTests) {
+      if (!testStatusChip) return;
+      const style = TEST_STATUS_STYLES[status] ?? TEST_STATUS_STYLES.info;
+      const baseClasses = 'inline-flex items-center gap-2 text-[0.65rem] font-black uppercase tracking-[0.18em] px-3 py-1 rounded-full border';
+      testStatusChip.className = `${baseClasses} ${style.chip}`;
+      const label = TEST_STATUS_LABELS[status] ?? status.toUpperCase();
+      const suffix = Number.isFinite(totalTests) ? ` · ${totalTests} tests` : '';
+      const icon = TEST_STATUS_ICONS[status] ?? '';
+      testStatusChip.textContent = icon ? `${icon} ${label}${suffix}` : `${label}${suffix}`;
+      testStatusChip.classList.remove('hidden');
+    }
+
+    function renderTestBreakdown(statusCounts) {
+      if (!testStatusBreakdown) return;
+      testStatusBreakdown.replaceChildren();
+      const order = ['passed', 'failed', 'error', 'skipped'];
+      let hasAny = false;
+      order.forEach((status) => {
+        const count = Number(statusCounts?.[status] ?? 0);
+        if (!count) return;
+        hasAny = true;
+        const badge = document.createElement('span');
+        badge.className = `inline-flex items-center gap-1 px-3 py-1 rounded-full font-semibold ${TEST_STATUS_STYLES[status]?.badge ?? TEST_STATUS_STYLES.info.badge}`;
+        badge.textContent = `${TEST_STATUS_ICONS[status] ?? ''} ${TEST_STATUS_LABELS[status] ?? status}: ${formatNumber(count)}`.trim();
+        testStatusBreakdown.appendChild(badge);
+      });
+      if (hasAny) {
+        testStatusBreakdown.classList.remove('hidden');
+      } else {
+        testStatusBreakdown.classList.add('hidden');
+      }
+    }
+
+    function renderTestSummarySection(result) {
+      if (!testsSummary || !testSummaryGrid) return;
+      testsSummary.classList.remove('hidden');
+      testSummaryGrid.replaceChildren();
+
+      const summary = result?.summary ?? {};
+      const rows = [
+        { label: 'Tests', value: formatNumber(summary.tests ?? 0), accent: 'text-slate-100' },
+        { label: 'Asserts', value: formatNumber(summary.assertions ?? 0), accent: 'text-slate-200' },
+        { label: 'Fallos', value: formatNumber(summary.failures ?? 0), accent: (summary.failures ?? 0) ? 'text-amber-300' : 'text-slate-400' },
+        { label: 'Errores', value: formatNumber(summary.errors ?? 0), accent: (summary.errors ?? 0) ? 'text-rose-300' : 'text-slate-400' },
+        { label: 'Omitidos', value: formatNumber(summary.skipped ?? 0), accent: (summary.skipped ?? 0) ? 'text-sky-300' : 'text-slate-400' },
+        { label: 'Tiempo reportado', value: formatSeconds(summary.time ?? 0), accent: 'text-slate-200' },
+        { label: 'Duración total', value: formatSeconds(result?.duration ?? summary.time ?? 0), accent: 'text-slate-200' },
+      ];
+
+      rows.forEach((row) => {
+        const card = document.createElement('div');
+        card.className = 'rounded-xl bg-slate-800/50 border border-slate-700/60 px-4 py-3 flex flex-col gap-1';
+        const labelEl = document.createElement('span');
+        labelEl.className = 'text-[0.7rem] uppercase tracking-[0.22em] text-slate-400';
+        labelEl.textContent = row.label;
+        const valueEl = document.createElement('span');
+        valueEl.className = `text-xl font-semibold ${row.accent}`;
+        valueEl.textContent = row.value;
+        card.append(labelEl, valueEl);
+        testSummaryGrid.appendChild(card);
+      });
+
+      renderTestBreakdown(result?.statusCounts ?? {});
+      renderTestResults(result?.tests ?? []);
+    }
+
+    function renderTestResults(tests) {
+      if (!testsTbody) return;
+      testsTbody.replaceChildren();
+      if (!Array.isArray(tests) || tests.length === 0) {
+        const empty = document.createElement('p');
+        empty.className = 'text-xs italic text-slate-400';
+        empty.textContent = 'No se registraron ejecuciones.';
+        testsTbody.appendChild(empty);
+        return;
+      }
+
+      const fragment = document.createDocumentFragment();
+      tests.slice(0, 200).forEach((test) => {
+        const status = test.status ?? 'info';
+        const style = TEST_STATUS_STYLES[status] ?? TEST_STATUS_STYLES.info;
+        const item = document.createElement('article');
+        item.className = 'rounded-xl border border-slate-700/60 bg-slate-800/40 sm:px-4 px-3 sm:py-4 py-3 flex flex-col justify-between gap-3 first:mt-0 last:mb-0 scroll-mt-4 sm:min-h-[88px] min-h-[72px]';
+
+        const header = document.createElement('div');
+        header.className = 'flex items-start gap-3';
+        const title = document.createElement('p');
+        title.className = 'test-item-title text-sm sm:text-base font-semibold text-slate-100 leading-tight';
+        title.textContent = test.name ?? 'Test';
+        const badgeClass = `inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[0.65rem] font-bold uppercase tracking-[0.18em] ${style.badge}`;
+        const badgeText = `${TEST_STATUS_ICONS[status] ?? ''} ${TEST_STATUS_LABELS[status] ?? status}`.trim();
+        header.append(title);
+
+        const classLine = document.createElement('p');
+        classLine.className = 'test-item-path text-xs text-slate-400 font-mono';
+        classLine.style.overflowWrap = 'anywhere';
+        classLine.textContent = test.class ?? '';
+
+        const meta = document.createElement('div');
+        meta.className = 'text-xs text-slate-500 flex items-center justify-between gap-3 pr-1 sm:pr-2';
+        const time = Number(test.time ?? 0);
+        const timeEl = document.createElement('span');
+        timeEl.textContent = `⏱️ ${formatSeconds(time)}`;
+        const statusEl = document.createElement('span');
+        statusEl.className = badgeClass;
+        statusEl.textContent = badgeText;
+        statusEl.setAttribute('aria-hidden', 'true');
+        meta.append(timeEl, statusEl);
+
+        item.append(header);
+        if (classLine.textContent) item.append(classLine);
+        item.append(meta);
+
+        const message = (test.message ?? '').toString().trim();
+        if (message) {
+          const messageEl = document.createElement('p');
+          messageEl.className = 'text-xs text-slate-300 border-l border-slate-700/70 pl-3 whitespace-pre-wrap break-words';
+          messageEl.textContent = message;
+          item.append(messageEl);
+        }
+
+        fragment.appendChild(item);
+      });
+
+      testsTbody.appendChild(fragment);
+    }
+
+    let testsPanelCollapsed = false;
+
+    function applyTestsPanelState(collapsed, { animate = true } = {}) {
+      if (!testsBody || !testsToggle) return;
+
+      testsPanelCollapsed = Boolean(collapsed);
+      const targetCollapsed = testsPanelCollapsed;
+      testsToggle.setAttribute('aria-expanded', String(!targetCollapsed));
+      const toggleLabel = testsToggle.querySelector('.tests-toggle-label');
+      const toggleIcon = testsToggle.querySelector('.tests-toggle-icon');
+      const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      if (prefersReducedMotion) {
+        testsToggle.classList.remove('transition-colors', 'duration-150');
+        toggleIcon?.classList.remove('transition-transform', 'duration-150');
+      } else {
+        testsToggle.classList.add('transition-colors', 'duration-150');
+        toggleIcon?.classList.add('transition-transform', 'duration-150');
+      }
+
+      const collapsedButtonClasses = ['bg-slate-800/80', 'border-slate-500/40', 'text-slate-200', 'hover:bg-slate-700/60', 'hover:border-slate-400/40'];
+      const expandedButtonClasses = ['bg-emerald-400/15', 'border-emerald-300/40', 'text-emerald-100', 'hover:bg-emerald-300/20', 'hover:border-emerald-200/40'];
+
+      if (targetCollapsed) {
+        testsToggle.classList.remove(...expandedButtonClasses);
+        testsToggle.classList.add(...collapsedButtonClasses);
+      } else {
+        testsToggle.classList.remove(...collapsedButtonClasses);
+        testsToggle.classList.add(...expandedButtonClasses);
+      }
+
+      if (toggleLabel) {
+        toggleLabel.textContent = targetCollapsed ? 'Mostrar tests' : 'Ocultar tests';
+      }
+      if (toggleIcon) {
+        if (targetCollapsed) {
+          toggleIcon.classList.add('rotate-90');
+          toggleIcon.classList.remove('rotate-0');
+          toggleIcon.classList.remove('opacity-90');
+          toggleIcon.classList.add('opacity-70');
+        } else {
+          toggleIcon.classList.remove('rotate-90');
+          toggleIcon.classList.add('rotate-0');
+          toggleIcon.classList.remove('opacity-70');
+          toggleIcon.classList.add('opacity-90');
+        }
+      }
+
+      if (!animate) {
+        testsBody.style.transition = '';
+        testsBody.style.overflow = '';
+        if (targetCollapsed) {
+          testsBody.style.display = 'none';
+          testsBody.style.height = '';
+          testsBody.style.opacity = '0';
+        } else {
+          testsBody.style.display = 'block';
+          testsBody.style.height = '';
+          testsBody.style.opacity = '1';
+        }
+        return;
+      }
+
+      const duration = 320;
+      testsBody.style.transition = `height ${duration}ms ease, opacity ${duration}ms ease`;
+
+      if (targetCollapsed) {
+        const currentHeight = testsBody.getBoundingClientRect().height || testsBody.scrollHeight;
+        testsBody.style.display = 'block';
+        testsBody.style.overflow = 'hidden';
+        testsBody.style.height = `${currentHeight}px`;
+        testsBody.style.opacity = '1';
+        requestAnimationFrame(() => {
+          testsBody.style.height = '0px';
+          testsBody.style.opacity = '0';
+        });
+        const onCollapseEnd = (event) => {
+          if (event.target !== testsBody || event.propertyName !== 'height') {
+            return;
+          }
+          testsBody.removeEventListener('transitionend', onCollapseEnd);
+          testsBody.style.display = 'none';
+          testsBody.style.height = '';
+          testsBody.style.opacity = '0';
+          testsBody.style.overflow = '';
+          testsBody.style.transition = '';
+        };
+        testsBody.addEventListener('transitionend', onCollapseEnd);
+      } else {
+        testsBody.style.display = 'block';
+        const targetHeight = testsBody.scrollHeight;
+        testsBody.style.overflow = 'hidden';
+        testsBody.style.height = '0px';
+        testsBody.style.opacity = '0';
+        requestAnimationFrame(() => {
+          testsBody.style.height = `${targetHeight}px`;
+          testsBody.style.opacity = '1';
+        });
+        const onExpandEnd = (event) => {
+          if (event.target !== testsBody || event.propertyName !== 'height') {
+            return;
+          }
+          testsBody.removeEventListener('transitionend', onExpandEnd);
+          testsBody.style.height = '';
+          testsBody.style.opacity = '1';
+          testsBody.style.overflow = '';
+          testsBody.style.transition = '';
+        };
+        testsBody.addEventListener('transitionend', onExpandEnd);
+      }
+    }
+
+    function toggleTestsPanel(forceState, { animate = true } = {}) {
+      const desiredState = typeof forceState === 'boolean' ? forceState : !testsPanelCollapsed;
+      try {
+        window.localStorage?.setItem(TESTS_PANEL_STORAGE_KEY, String(desiredState));
+      } catch (_) {
+        // ignore storage issues
+      }
+      applyTestsPanelState(desiredState, { animate });
+    }
+
+    let storedTestsPanelState = null;
+    try {
+      storedTestsPanelState = window.localStorage?.getItem(TESTS_PANEL_STORAGE_KEY);
+    } catch (_) {
+      storedTestsPanelState = null;
+    }
+    applyTestsPanelState(storedTestsPanelState === 'true', { animate: false });
+
+    async function runPhpUnitSuite() {
+      if (!testRunButton) return;
+      const originalLabel = testRunButton.textContent;
+      testRunButton.disabled = true;
+      testRunButton.textContent = '⏳ Ejecutando...';
+      renderTestMessage('Ejecutando suite de tests, esto puede tardar unos segundos…', 'running');
+      resetTestResults();
+      if (testsPanelCollapsed) {
+        toggleTestsPanel(false, { animate: true });
+      }
+      setTestStatusChip('running');
+
+      try {
+        const response = await fetch('/dev/tests/run', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({})
+        });
+
+        const payload = await response.json().catch(() => null);
+        if (!response.ok || !payload) {
+          const message = payload?.message ?? 'No se pudo ejecutar la suite de tests.';
+          renderTestMessage(message, 'error');
+          resetTestResults();
+          return;
+        }
+
+        if (payload.estado !== 'éxito') {
+          renderTestMessage(payload.message ?? 'La suite devolvió un estado inesperado.', 'error');
+          resetTestResults();
+          return;
+        }
+
+        const result = payload.datos ?? {};
+        const status = result.status ?? 'info';
+        renderTestMessage(result.message ?? '', status);
+        setTestStatusChip(status, Number(result.summary?.tests ?? 0));
+        renderTestSummarySection(result);
+      } catch (error) {
+        renderTestMessage(error.message ?? 'Error desconocido al ejecutar los tests.', 'error');
+        resetTestResults();
+      } finally {
+        testRunButton.disabled = false;
+        testRunButton.textContent = originalLabel;
+      }
     }
 
     function getAlbumId(raw){
@@ -492,9 +938,21 @@
       card.appendChild(actions);
 
       // Editor
-      const editSection = buildEditSection(normalizedAlbum);
+      const editSection = buildEditSection(normalizedAlbum, exitEditMode);
       editSection.section.addEventListener('click', (e) => e.stopPropagation());
       card.appendChild(editSection.section);
+
+      function enterEditMode() {
+        card.classList.add('is-editing');
+        editButton.classList.add('hidden');
+        deleteButton.classList.add('hidden');
+      }
+
+      function exitEditMode() {
+        card.classList.remove('is-editing');
+        editButton.classList.remove('hidden');
+        deleteButton.classList.remove('hidden');
+      }
 
       // Listeners del editor
       editButton.addEventListener('click', () => {
@@ -502,8 +960,10 @@
         if (hidden) {
           editSection.populate(album);
           editSection.section.classList.remove('hidden');
+          enterEditMode();
         } else {
           editSection.section.classList.add('hidden');
+          exitEditMode();
         }
       });
 
@@ -537,7 +997,7 @@
     }
 
     // ====== Editor de álbum
-    function buildEditSection(initialAlbum) {
+    function buildEditSection(initialAlbum, onExitEditMode) {
       let currentAlbum = withAlbumId(initialAlbum);
 
       const section = document.createElement('div');
@@ -597,6 +1057,9 @@
         coverUrlInput.value = currentAlbum.coverImage ?? '';
         clearFileInput(coverFileInput);
         message.classList.add('hidden');
+        if (typeof onExitEditMode === 'function') {
+          onExitEditMode();
+        }
       });
 
       form.addEventListener('submit', async (event) => {
@@ -653,6 +1116,9 @@
           coverUrlInput.value = currentAlbum.coverImage ?? '';
           clearFileInput(coverFileInput);
           message.classList.add('hidden');
+          if (typeof onExitEditMode === 'function') {
+            onExitEditMode();
+          }
           fetchAlbums();
         } catch (error) {
           showMessage(message, error.message, true);
@@ -746,6 +1212,8 @@
     filterInput?.addEventListener('input', debounce(applyFilters, 200));
     orderSelect?.addEventListener('change', applyFilters);
     refreshButton.addEventListener('click', fetchAlbums);
+    testRunButton?.addEventListener('click', runPhpUnitSuite);
+    testsToggle?.addEventListener('click', () => toggleTestsPanel());
 
     // Init
     fetchAlbums();
