@@ -10,7 +10,7 @@ El proyecto sigue una estricta separación de capas, garantizando que la lógica
 
 ```
 ┌──────────────────┐
-│  Presentation    │ (index.php, *.html)
+│  Presentation    │ (index.php, views/*.php)
 └────────┬─────────┘
          │
 ┌────────▼────────┐
@@ -38,9 +38,8 @@ El proyecto sigue una estricta separación de capas, garantizando que la lógica
 ```
 clean-marvel/
 ├── public/
-│   ├── albums.html         # UI para gestionar álbumes
-│   ├── heroes.html         # UI para gestionar héroes de un álbum
-│   └── index.php           # Entry point y API router
+│   ├── assets/             # CSS y JS modular (ES Modules) para la UI
+│   └── index.php           # Front controller y router HTTP (HTML + JSON)
 │
 ├── src/
 │   ├── bootstrap.php       # Inyección de dependencias
@@ -78,23 +77,29 @@ La API REST gestiona todos los recursos del sistema y es consumida por las inter
 | `POST` | `/albums/{albumId}/heroes`    | Añade un nuevo héroe a un álbum.                |
 | `DELETE`| `/heroes/{heroId}`            | Elimina un héroe específico.                    |
 | `GET`  | `/notifications`              | Obtiene el log de notificaciones en tiempo real.|
+| `POST` | `/comics/generate`            | Genera un cómic IA con héroes seleccionados.    |
+| `POST` | `/dev/tests/run`              | Ejecuta PHPUnit (solo entorno local).           |
+| `DELETE`| `/notifications`             | Limpia el log de notificaciones.                |
 
 ---
 
 ## Interfaces de Usuario (UI)
 
-El proyecto incluye dos interfaces web sencillas para interactuar con la API.
+Las vistas se renderizan desde `public/index.php` usando las plantillas PHP ubicadas en `views/`. Cada vista carga módulos JS desde `public/assets/` que consumen la API.
 
-### `albums.html`
-- **Crear álbumes**: Formulario para añadir nuevos álbumes.
-- **Listar y eliminar álbumes**: Visualiza los álbumes existentes y permite borrarlos.
-- **Acceso a héroes**: Enlace para gestionar los héroes de cada álbum.
+### `/albums`
+- **Crear álbumes**: Formulario para añadir nuevos álbumes y subir portadas (URL o archivo).
+- **Listar, editar y eliminar álbumes**: Grid con filtros/orden y acciones de borrado. Incluye panel de actividad y ejecución de tests (`/dev/tests/run`).
+- **Acceso a héroes**: Navega a `/heroes` con parámetros del álbum seleccionado.
 
-### `heroes.html`
-- **Crear héroes**: Formulario para añadir héroes al álbum seleccionado.
-- **Listar y eliminar héroes**: Muestra los héroes del álbum y permite eliminarlos individualmente.
-- **Notificaciones en vivo**: Muestra un aviso cuando se crea un nuevo héroe, consultando el endpoint `/notifications`.
-- **Eliminar álbum completo**: Botón para borrar el álbum actual y todos sus héroes.
+### `/heroes`
+- **Crear héroes**: Formulario asociado al álbum recibido por query string (`albumId`, `albumName`).
+- **Listar, editar y eliminar héroes**: Tarjetas con modo edición inline y registro de actividad local.
+- **Notificaciones en vivo**: Muestra actividad basada en eventos publicados y almacenados en `notifications.log`.
+
+### `/comic`
+- **Selección de héroes global** para generar cómics con IA.
+- **Generación de historia** mediante `POST /comics/generate`, mostrando viñetas y slideshow con los héroes elegidos.
 
 ---
 
@@ -131,7 +136,7 @@ php -S localhost:8080 -t public
 ```
 
 **3. Acceder a la aplicación:**
-Abre tu navegador y visita [http://localhost:8080/albums.html](http://localhost:8080/albums.html).
+Abre tu navegador y visita [http://localhost:8080/](http://localhost:8080/) (o directamente `/albums`, `/heroes`, `/comic`).
 
 ---
 
