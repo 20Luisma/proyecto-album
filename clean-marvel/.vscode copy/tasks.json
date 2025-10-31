@@ -1,0 +1,106 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "🚀 Iniciar servidor PHP",
+      "type": "shell",
+      "command": "php",
+      "args": [
+        "-S",
+        "localhost:8080",
+        "-t",
+        "public"
+      ],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "🧪 Ejecutar Tests PHPUnit",
+      "type": "shell",
+      "command": "vendor/bin/phpunit",
+      "args": [
+        "--colors=always",
+        "--testdox"
+      ],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "🔍 Analizar código (PHPStan)",
+      "type": "shell",
+      "command": "vendor/bin/phpstan",
+      "args": [
+        "analyse",
+        "--memory-limit=512M"
+      ],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "⚙️ Validar composer",
+      "type": "shell",
+      "command": "composer",
+      "args": [
+        "validate"
+      ],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "🧱 Build completo (Tests + PHPStan + Composer)",
+      "dependsOn": [
+        "🧪 Ejecutar Tests PHPUnit",
+        "🔍 Analizar código (PHPStan)",
+        "⚙️ Validar composer"
+      ],
+      "dependsOrder": "sequence",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "⬆️ Git: add + commit + push (seguro)",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "-c",
+        "[ -f clean-marvel/.env ] && { echo \"ERROR: existe clean-marvel/.env. Muévelo o bórralo antes de subir.\"; exit 1; }; git add . && (git commit -m \"update clean-marvel\" || true) && git push"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "▶️ Servidor (por defecto)",
+      "dependsOn": [
+        "🚀 Iniciar servidor PHP"
+      ],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
+    }
+  ]
+}
