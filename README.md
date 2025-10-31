@@ -149,9 +149,19 @@ rm storage/*.json storage/notifications.log
 ```
 
 ---
+🔜 Próximos pasos:
+
+Separar los controladores del index.php
+
+Crear un microservicio en PHP para hablar con OpenAI
+
+Otro microservicio para el sistema RAG (vectorización + recuperación)
+
+Añadir un login seguro por usuarios
+
+Pasar de JSON a SQLite/MySQL sin romper la estructura limpia
 
 ## Autor
 
 **Luis Martín Pallante**
-- **Sitio Web**: [CreaWebes.com](https://www.creawebes.com)
-- **Perfil**: Desarrollador Full Stack y Arquitecto de Software.
+
