@@ -163,5 +163,5 @@ Pasar de JSON a SQLite/MySQL sin romper la estructura limpia
 
 ## Autor
 
-**Luis Martín Pallante** hola
+**Luis Martín Pallante** puto
 
