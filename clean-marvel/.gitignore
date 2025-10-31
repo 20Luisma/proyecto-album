@@ -67,3 +67,5 @@ phpunit.xml.dist
 *.old
 clean-marvel/.env
 .env
+clean-marvel/.env
+.env
