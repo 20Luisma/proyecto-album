@@ -37,6 +37,21 @@ final class InMemoryHeroRepository implements HeroRepository
         return $filtered;
     }
 
+    /**
+     * @return array<int, Hero>
+     */
+    public function all(): array
+    {
+        $all = array_values($this->heroes);
+
+        usort(
+            $all,
+            static fn (Hero $a, Hero $b): int => $a->createdAt() <=> $b->createdAt()
+        );
+
+        return $all;
+    }
+
     public function find(string $heroId): ?Hero
     {
         return $this->heroes[$heroId] ?? null;

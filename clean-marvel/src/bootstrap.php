@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\AI\OpenAIComicGenerator;
 use App\Albums\Application\UseCase\CreateAlbumUseCase;
 use App\Albums\Application\UseCase\UpdateAlbumUseCase;
 use App\Albums\Application\UseCase\DeleteAlbumUseCase;
@@ -9,6 +10,7 @@ use App\Albums\Application\UseCase\ListAlbumsUseCase;
 use App\Heroes\Application\UseCase\SeedAlbumHeroesUseCase;
 use App\Albums\Infrastructure\Persistence\FileAlbumRepository;
 use App\Dev\Seed\SeedHeroesService;
+use App\Dev\Test\PhpUnitTestRunner;
 use App\Heroes\Application\UseCase\CreateHeroUseCase;
 use App\Heroes\Application\UseCase\DeleteHeroUseCase;
 use App\Heroes\Application\UseCase\FindHeroUseCase;
@@ -83,6 +85,14 @@ return (static function (): array {
         $heroRepository,
         $createHeroUseCase
     );
+
+    $container['ai'] = [
+        'comicGenerator' => new OpenAIComicGenerator($_ENV['OPENAI_API_KEY'] ?? getenv('OPENAI_API_KEY') ?: ''),
+    ];
+
+    $container['devTools'] = [
+        'testRunner' => PhpUnitTestRunner::fromEnvironment($rootPath),
+    ];
 
     try {
         $container['seedHeroesService']->seedIfEmpty();

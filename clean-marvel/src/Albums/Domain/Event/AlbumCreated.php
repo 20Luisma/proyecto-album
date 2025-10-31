@@ -12,8 +12,8 @@ final class AlbumCreated extends DomainEvent
     public function __construct(
         string $aggregateId,
         private readonly string $name,
-        string $eventId = null,
-        string $occurredOn = null
+        ?string $eventId = null,
+        ?\DateTimeImmutable $occurredOn = null
     ) {
         parent::__construct($aggregateId, $eventId, $occurredOn);
     }
@@ -23,6 +23,9 @@ final class AlbumCreated extends DomainEvent
         return 'album.created';
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     public function toPrimitives(): array
     {
         return [
@@ -30,13 +33,21 @@ final class AlbumCreated extends DomainEvent
         ];
     }
 
+    /**
+     * @param array<string, mixed> $body
+     */
     public static function fromPrimitives(
         string $aggregateId,
         array $body,
-        string $eventId,
-        string $occurredOn
-    ): DomainEvent {
-        return new self($aggregateId, $body['name'], $eventId, $occurredOn);
+        ?string $eventId,
+        ?\DateTimeImmutable $occurredOn
+    ): static {
+        return new self(
+            $aggregateId,
+            $body['name'] ?? '',
+            $eventId,
+            $occurredOn
+        );
     }
 
     public function name(): string

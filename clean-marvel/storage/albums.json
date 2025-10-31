@@ -1,10 +1,10 @@
 [
     {
         "albumId": "51f11956-6c06-4a49-8d2e-c8f5ea9b7a9d",
-        "nombre": "Avengers",
+        "nombre": "Avengerss",
         "coverImage": "https://filmschoolrejects.com/wp-content/uploads/2018/04/the-avengers-comics.jpg",
         "createdAt": "2025-10-26T15:27:58+00:00",
-        "updatedAt": "2025-10-26T18:37:13+00:00"
+        "updatedAt": "2025-10-27T20:42:49+00:00"
     },
     {
         "albumId": "a2c9479d-9e45-4d62-8d6a-bfc213f54a1a",
@@ -29,10 +29,10 @@
     },
     {
         "albumId": "b8a7de93-fc3a-44cb-93e1-49b8b5e0e1f7",
-        "nombre": "Fantastic Four",
-        "coverImage": "https://cdn.marvel.com/content/1x/four020_flcov_copy.jpg",
+        "nombre": "Fantastic Four.",
+        "coverImage": "https://cdn.marvel.com/content/1x/_ff_card_0.jpg",
         "createdAt": "2025-10-26T15:28:46+00:00",
-        "updatedAt": "2025-10-26T16:29:09+00:00"
+        "updatedAt": "2025-10-28T18:03:10+00:00"
     },
     {
         "albumId": "f3e97d61-1d57-48af-bf14-7c4c3e45863e",

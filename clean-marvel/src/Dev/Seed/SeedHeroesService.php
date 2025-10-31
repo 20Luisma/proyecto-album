@@ -45,34 +45,34 @@ class SeedHeroesService
 
     public function seedIfEmpty(): void
     {
-        if (count($this->heroRepository->findAll()) > 0) {
-            return;
+        $albums = $this->albumRepository->all();
+
+        foreach ($albums as $album) {
+            if ($this->heroRepository->byAlbum($album->albumId()) !== []) {
+                return;
+            }
         }
 
-        $this->seed(false);
+        $this->seed($albums, false);
     }
 
     public function seedForce(): int
     {
-        return $this->seed(true);
+        return $this->seed($this->albumRepository->all(), true);
     }
 
-    private function seed(bool $force): int
+    /**
+     * @param array<int, \App\Albums\Domain\Entity\Album> $albums
+     */
+    private function seed(array $albums, bool $force): int
     {
         $createdCount = 0;
-        $albums = $this->albumRepository->findAll();
-        $existingHeroesSlugsByAlbum = [];
-        if ($force) {
-            $allHeroes = $this->heroRepository->findAll();
-            foreach ($allHeroes as $hero) {
-                $existingHeroesSlugsByAlbum[$hero->getAlbumId()][] = Slugger::slugify($hero->getName());
-            }
-        }
 
         foreach ($albums as $album) {
-            $albumName = $album->getName();
-            $heroDataForAlbum = null;
+            $albumId = $album->albumId();
+            $albumName = $album->nombre();
 
+            $heroDataForAlbum = null;
             foreach (self::HEROES_DATA as $key => $data) {
                 if (strcasecmp($key, $albumName) === 0) {
                     $heroDataForAlbum = $data;
@@ -84,20 +84,31 @@ class SeedHeroesService
                 continue;
             }
 
+            $existingSlugs = array_map(
+                static fn ($hero): string => Slugger::slugify($hero->nombre()),
+                $this->heroRepository->byAlbum($albumId)
+            );
+
+            if (!$force && $existingSlugs !== []) {
+                continue;
+            }
+
             foreach ($heroDataForAlbum as $heroData) {
                 [$name, $image, $content] = $heroData;
                 $slug = Slugger::slugify($name);
 
-                if ($force && isset($existingHeroesSlugsByAlbum[$album->getId()]) && in_array($slug, $existingHeroesSlugsByAlbum[$album->getId()])) {
+                if ($force && in_array($slug, $existingSlugs, true)) {
                     continue;
                 }
 
                 $this->createHeroUseCase->execute(
-                    new CreateHeroRequest($album->getId(), $name, $content, $image)
+                    new CreateHeroRequest($albumId, $name, $content, $image)
                 );
+                $existingSlugs[] = $slug;
                 $createdCount++;
             }
         }
+
         return $createdCount;
     }
 }

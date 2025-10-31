@@ -2,51 +2,54 @@
 
 declare(strict_types=1);
 
+use App\AI\OpenAIComicGenerator;
 use App\Albums\Application\DTO\CreateAlbumRequest;
 use App\Albums\Application\DTO\UpdateAlbumRequest;
 use App\Heroes\Application\DTO\CreateHeroRequest;
 use App\Heroes\Application\DTO\UpdateHeroRequest;
+use App\Dev\Test\PhpUnitTestRunner;
 use App\Shared\Http\JsonResponse;
 
 require_once __DIR__ . '/../vendor/autoload.php';
 
 $container = require __DIR__ . '/../src/bootstrap.php';
 
-if (!defined('ALBUM_UPLOAD_DIR')) {
-    define('ALBUM_UPLOAD_DIR', __DIR__ . '/uploads/albums');
-}
-if (!defined('ALBUM_UPLOAD_URL_PREFIX')) {
-    define('ALBUM_UPLOAD_URL_PREFIX', '/uploads/albums/');
-}
-if (!defined('ALBUM_COVER_MAX_BYTES')) {
-    define('ALBUM_COVER_MAX_BYTES', 5 * 1024 * 1024);
-}
+if (!defined('SKIP_HTTP_BOOT')) {
+    if (!defined('ALBUM_UPLOAD_DIR')) {
+        define('ALBUM_UPLOAD_DIR', __DIR__ . '/uploads/albums');
+    }
+    if (!defined('ALBUM_UPLOAD_URL_PREFIX')) {
+        define('ALBUM_UPLOAD_URL_PREFIX', '/uploads/albums/');
+    }
+    if (!defined('ALBUM_COVER_MAX_BYTES')) {
+        define('ALBUM_COVER_MAX_BYTES', 5 * 1024 * 1024);
+    }
 
-ensureDirectory(ALBUM_UPLOAD_DIR);
+    ensureDirectory(ALBUM_UPLOAD_DIR);
 
-$path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
-$method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
+    $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
+    $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 
-header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type');
+    if (handleHtmlRoutes($method, $path)) {
+        return;
+    }
 
-if ($path === '/' || $path === '') {
-    header('Location: /albums.html');
-    exit;
-}
+    header('Access-Control-Allow-Origin: *');
+    header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
+    header('Access-Control-Allow-Headers: Content-Type');
 
-if ($method === 'OPTIONS') {
-    http_response_code(204);
-    exit;
-}
+    if ($method === 'OPTIONS') {
+        http_response_code(204);
+        exit;
+    }
 
-try {
-    route($method, $path, $container);
-} catch (InvalidArgumentException $exception) {
-    JsonResponse::error($exception->getMessage(), 422);
-} catch (Throwable $exception) {
-    JsonResponse::error('Error inesperado: ' . $exception->getMessage(), 500);
+    try {
+        route($method, $path, $container);
+    } catch (InvalidArgumentException $exception) {
+        JsonResponse::error($exception->getMessage(), 422);
+    } catch (Throwable $exception) {
+        JsonResponse::error('Error inesperado: ' . $exception->getMessage(), 500);
+    }
 }
 
 function route(string $method, string $path, array $container): void
@@ -71,8 +74,19 @@ function route(string $method, string $path, array $container): void
 
 function handleGet(string $path, array $container): void
 {
+    if (wantsHtmlResponse()) {
+        renderNotFound();
+        return;
+    }
+
     if ($path === '/albums') {
         $data = $container['useCases']['listAlbums']->execute();
+        JsonResponse::success($data);
+        return;
+    }
+
+    if ($path === '/heroes') {
+        $data = $container['useCases']['listHeroes']->execute();
         JsonResponse::success($data);
         return;
     }
@@ -106,6 +120,29 @@ function handleGet(string $path, array $container): void
 
 function handlePost(string $path, array $container): void
 {
+    if ($path === '/dev/tests/run') {
+        $testRunner = $container['devTools']['testRunner'] ?? null;
+        if (!$testRunner instanceof PhpUnitTestRunner) {
+            JsonResponse::error('Runner de tests no disponible.', 500);
+            return;
+        }
+
+        $result = $testRunner->run();
+
+        if (($result['status'] ?? null) === 'skipped') {
+            JsonResponse::error($result['message'] ?? 'La ejecución de tests está deshabilitada.', 403);
+            return;
+        }
+
+        if (($result['status'] ?? null) === 'error') {
+            JsonResponse::error($result['message'] ?? 'Error al ejecutar la suite de tests.', 500);
+            return;
+        }
+
+        JsonResponse::success($result);
+        return;
+    }
+
     if (preg_match('#^/albums/([A-Za-z0-9\-]+)/cover$#', $path, $matches) === 1) {
         handleAlbumCoverUpload($matches[1], $container);
         return;
@@ -119,6 +156,11 @@ function handlePost(string $path, array $container): void
         }
         $createdCount = $container['seedHeroesService']->seedForce();
         JsonResponse::success(['created' => $createdCount], 201);
+        return;
+    }
+
+    if ($path === '/comics/generate') {
+        handleComicGeneration($container);
         return;
     }
 
@@ -151,6 +193,130 @@ function handlePost(string $path, array $container): void
     }
 
     JsonResponse::error('Endpoint no encontrado.', 404);
+}
+
+function handleComicGeneration(array $container): void
+{
+    $payload = body();
+    $heroIds = $payload['heroIds'] ?? [];
+
+    if (!is_array($heroIds) || $heroIds === []) {
+        JsonResponse::error('Selecciona al menos un héroe para generar el cómic.', 422);
+        return;
+    }
+
+    $heroRepository = $container['heroRepository'] ?? null;
+    if ($heroRepository === null) {
+        JsonResponse::error('Repositorio de héroes no disponible.', 500);
+        return;
+    }
+
+    $heroes = [];
+    foreach ($heroIds as $heroId) {
+        if (!is_string($heroId) || trim($heroId) === '') {
+            continue;
+        }
+        $hero = $heroRepository->find($heroId);
+        if ($hero === null) {
+            continue;
+        }
+        $heroes[] = [
+            'heroId' => $hero->heroId(),
+            'nombre' => $hero->nombre(),
+            'contenido' => $hero->contenido(),
+            'imagen' => $hero->imagen(),
+        ];
+    }
+
+    if ($heroes === []) {
+        JsonResponse::error('No se encontraron héroes válidos para generar el cómic.', 404);
+        return;
+    }
+
+    $generator = $container['ai']['comicGenerator'] ?? null;
+    if (!$generator instanceof OpenAIComicGenerator || !$generator->isConfigured()) {
+        JsonResponse::error('La generación con IA no está disponible. Configura OPENAI_API_KEY.', 503);
+        return;
+    }
+
+    try {
+        $result = $generator->generateComic($heroes);
+        JsonResponse::success($result, 201);
+    } catch (InvalidArgumentException $exception) {
+        JsonResponse::error($exception->getMessage(), 422);
+    } catch (RuntimeException $exception) {
+        JsonResponse::error($exception->getMessage(), 502);
+    } catch (Throwable $exception) {
+        JsonResponse::error('No se pudo generar el cómic con IA: ' . $exception->getMessage(), 502);
+    }
+}
+
+function handleHtmlRoutes(string $method, string $path): bool
+{
+    if ($method !== 'GET') {
+        return false;
+    }
+
+    $normalizedPath = $path === '' ? '/' : $path;
+    $viewMap = [
+        '/' => 'albums',
+        '/albums' => 'albums',
+        '/heroes' => 'heroes',
+        '/comic' => 'comic',
+    ];
+
+    if (!array_key_exists($normalizedPath, $viewMap)) {
+        return false;
+    }
+
+    if ($normalizedPath === '/') {
+        renderView($viewMap[$normalizedPath]);
+        return true;
+    }
+
+    if (wantsHtmlResponse()) {
+        renderView($viewMap[$normalizedPath]);
+        return true;
+    }
+
+    return false;
+}
+
+function wantsHtmlResponse(): bool
+{
+    $accept = $_SERVER['HTTP_ACCEPT'] ?? '';
+    return stripos($accept, 'text/html') !== false;
+}
+
+function renderView(string $view): void
+{
+    $viewFile = __DIR__ . '/../views/' . $view . '.php';
+    if (!is_file($viewFile)) {
+        http_response_code(500);
+        echo 'Vista no encontrada.';
+        return;
+    }
+
+    require $viewFile;
+}
+
+function renderNotFound(): void
+{
+    http_response_code(404);
+    $pageTitle = '404 — Recurso no encontrado';
+    $additionalStyles = [];
+    require __DIR__ . '/../views/header.php';
+    ?>
+    <main class="site-main">
+      <div class="max-w-3xl mx-auto py-16 px-4 text-center space-y-6">
+        <h1 class="text-5xl font-bold text-white">404</h1>
+        <p class="text-lg text-gray-300 leading-relaxed">La ruta solicitada no existe o se encuentra temporalmente inactiva.</p>
+        <a href="/albums" class="btn btn-primary inline-flex items-center gap-2 mx-auto">Volver al inicio</a>
+      </div>
+    </main>
+    <?php
+    $scripts = [];
+    require __DIR__ . '/../views/footer.php';
 }
 
 function handlePut(string $path, array $container): void

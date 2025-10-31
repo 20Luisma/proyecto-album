@@ -11,16 +11,16 @@ use DateTimeImmutable;
 final class HeroCreated extends DomainEvent
 {
     public function __construct(
-        ?string $eventId,
         string $aggregateId,
-        ?DateTimeImmutable $occurredOn,
         private readonly string $albumId,
         private readonly string $albumName,
         private readonly string $name,
         private readonly string $slug,
-        private readonly string $image
+        private readonly string $image,
+        ?string $eventId = null,
+        ?DateTimeImmutable $occurredOn = null
     ) {
-        parent::__construct($eventId, $aggregateId, $occurredOn);
+        parent::__construct($aggregateId, $eventId, $occurredOn);
     }
 
     public static function eventName(): string
@@ -45,33 +45,37 @@ final class HeroCreated extends DomainEvent
     }
 
     /**
-     * @param array{heroId: string, albumId: string, albumName: string, name: string, slug: string, image: string, occurredOn: string, eventId?: string} $data
+     * @param array<string, mixed> $body
      */
-    public static function fromPrimitives(array $data): static
-    {
+    public static function fromPrimitives(
+        string $aggregateId,
+        array $body,
+        ?string $eventId,
+        ?DateTimeImmutable $occurredOn
+    ): static {
         return new self(
-            $data['eventId'] ?? null,
-            $data['heroId'],
-            new DateTimeImmutable($data['occurredOn']),
-            $data['albumId'],
-            $data['albumName'],
-            $data['name'],
-            $data['slug'],
-            $data['image']
+            $aggregateId,
+            $body['albumId'] ?? '',
+            $body['albumName'] ?? '',
+            $body['name'] ?? '',
+            $body['slug'] ?? '',
+            $body['image'] ?? '',
+            $eventId,
+            $occurredOn
         );
     }
 
     public static function forHero(Hero $hero, string $albumName): self
     {
         return new self(
-            null,
             $hero->heroId(),
-            null,
             $hero->albumId(),
             $albumName,
             $hero->name(),
             $hero->slug(),
-            $hero->image()
+            $hero->image(),
+            null,
+            null
         );
     }
 

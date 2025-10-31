@@ -11,13 +11,13 @@ use DateTimeImmutable;
 final class AlbumUpdated extends DomainEvent
 {
     public function __construct(
-        ?string $eventId,
         string $aggregateId,
-        ?DateTimeImmutable $occurredOn,
         private readonly string $nombre,
-        private readonly ?string $coverImage
+        private readonly ?string $coverImage,
+        ?string $eventId = null,
+        ?DateTimeImmutable $occurredOn = null
     ) {
-        parent::__construct($eventId, $aggregateId, $occurredOn);
+        parent::__construct($aggregateId, $eventId, $occurredOn);
     }
 
     public static function eventName(): string
@@ -40,27 +40,31 @@ final class AlbumUpdated extends DomainEvent
     }
 
     /**
-     * @param array{albumId: string, nombre: string, coverImage: ?string, occurredOn: string, eventId?: string} $data
+     * @param array<string, mixed> $body
      */
-    public static function fromPrimitives(array $data): static
-    {
+    public static function fromPrimitives(
+        string $aggregateId,
+        array $body,
+        ?string $eventId,
+        ?DateTimeImmutable $occurredOn
+    ): static {
         return new self(
-            $data['eventId'] ?? null,
-            $data['albumId'],
-            new DateTimeImmutable($data['occurredOn']),
-            $data['nombre'],
-            $data['coverImage'] ?? null
+            $aggregateId,
+            $body['nombre'] ?? '',
+            $body['coverImage'] ?? null,
+            $eventId,
+            $occurredOn
         );
     }
 
     public static function fromAlbum(Album $album): self
     {
         return new self(
-            null,
             $album->albumId(),
-            null,
             $album->nombre(),
-            $album->coverImage()
+            $album->coverImage(),
+            null,
+            null
         );
     }
 

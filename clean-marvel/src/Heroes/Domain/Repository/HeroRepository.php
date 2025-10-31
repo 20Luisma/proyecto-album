@@ -15,6 +15,11 @@ interface HeroRepository
      */
     public function byAlbum(string $albumId): array;
 
+    /**
+     * @return array<int, Hero>
+     */
+    public function all(): array;
+
     public function find(string $heroId): ?Hero;
 
     public function delete(string $heroId): void;

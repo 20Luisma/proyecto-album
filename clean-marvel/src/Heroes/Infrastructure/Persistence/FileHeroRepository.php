@@ -49,6 +49,17 @@ final class FileHeroRepository implements HeroRepository
         );
     }
 
+    /**
+     * @return array<int, Hero>
+     */
+    public function all(): array
+    {
+        return array_map(
+            static fn (array $data): Hero => Hero::fromPrimitives($data),
+            $this->loadRecords()
+        );
+    }
+
     public function find(string $heroId): ?Hero
     {
         foreach ($this->loadRecords() as $data) {
