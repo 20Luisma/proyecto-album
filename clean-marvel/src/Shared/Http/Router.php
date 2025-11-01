@@ -16,6 +16,7 @@ use Src\Controllers\HeroController;
 use Src\Controllers\Http\Request;
 use Src\Controllers\NotificationController;
 use Src\Controllers\PageController;
+use RuntimeException;
 use Throwable;
 
 final class Router
@@ -35,7 +36,7 @@ final class Router
             return;
         }
 
-        if ($method === 'GET' && Request::wantsHtml()) {
+        if ($method === 'GET' && Request::wantsHtml() && $path !== '/readme') {
             $pageController->renderNotFound();
             return;
         }
@@ -64,6 +65,11 @@ final class Router
     {
         if ($path === '/albums') {
             $this->albumController()->index();
+            return true;
+        }
+
+        if ($path === '/readme') {
+            ($this->readmeController())();
             return true;
         }
 
@@ -185,6 +191,7 @@ final class Router
     }
 
     private ?AlbumController $albumController = null;
+    private ?ReadmeController $readmeController = null;
 
     private function albumController(): AlbumController
     {
@@ -201,6 +208,25 @@ final class Router
         }
 
         return $this->albumController;
+    }
+
+    private function readmeController(): ReadmeController
+    {
+        if ($this->readmeController === null) {
+            $controller = $this->container['readme.show'] ?? null;
+
+            if (is_callable($controller)) {
+                $controller = $controller();
+            }
+
+            if (!$controller instanceof ReadmeController) {
+                throw new RuntimeException('Controlador de README no disponible.');
+            }
+
+            $this->readmeController = $controller;
+        }
+
+        return $this->readmeController;
     }
 
     private ?HeroController $heroController = null;

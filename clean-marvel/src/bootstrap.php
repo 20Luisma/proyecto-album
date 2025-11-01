@@ -25,6 +25,7 @@ use App\Notifications\Application\ListNotificationsUseCase;
 use App\Notifications\Infrastructure\FileNotificationSender;
 use App\Notifications\Infrastructure\NotificationRepository;
 use App\Shared\Infrastructure\Bus\InMemoryEventBus;
+use Src\Shared\Http\ReadmeController;
 
 return (static function (): array {
     $rootPath = dirname(__DIR__);
@@ -102,6 +103,8 @@ return (static function (): array {
         // Do not break the app on boot if seeding fails
         error_log('Hero seeding failed: ' . $e->getMessage());
     }
+
+    $container['readme.show'] = static fn (): ReadmeController => new ReadmeController($rootPath);
 
     return $container;
 })();

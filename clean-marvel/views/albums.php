@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 $pageTitle = 'Clean Marvel Album — Álbumes';
-$additionalStyles = ['/assets/css/albums.css'];
+$additionalStyles = ['/assets/css/albums.css', '/assets/css/readme.css'];
 require __DIR__ . '/header.php';
 ?>
 
@@ -18,10 +18,15 @@ require __DIR__ . '/header.php';
       </div>
       <div class="flex w-full flex-wrap items-center gap-4 md:flex-nowrap md:gap-6">
         <p class="app-hero__meta flex-1 min-w-[14rem]">Organiza tus colecciones con un toque heroico</p>
-        <a href="/comic" class="btn app-hero__cta app-hero__cta-equal ml-auto">
-          <span>Tu Comic</span>
-          <span class="app-hero__cta-icon" aria-hidden="true">IA</span>
-        </a>
+        <div class="flex items-center gap-3 ml-auto">
+          <button id="btn-readme" class="btn app-hero__cta app-hero__cta-equal btn-readme" type="button">
+            <span>README</span>
+          </button>
+          <a href="/comic" class="btn app-hero__cta app-hero__cta-equal">
+            <span>Tu Comic</span>
+            <span class="app-hero__cta-icon" aria-hidden="true">IA</span>
+          </a>
+        </div>
       </div>
     </div>
   </header>
@@ -114,6 +119,10 @@ require __DIR__ . '/header.php';
       <!-- MAIN DERECHA: Mis Álbumes -->
       <section class="lg:col-span-2 space-y-8">
         <section class="card section-lined rounded-2xl p-6 shadow-xl">
+          <div class="albums-header mb-4">
+            <h1 class="text-xl font-semibold text-slate-100 sm:text-2xl">Álbumes</h1>
+          </div>
+
           <!-- Encabezado: contador + filtros + acciones -->
           <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div class="flex items-center gap-3">
@@ -146,8 +155,19 @@ require __DIR__ . '/header.php';
       </section>
       </div>
     </div>
+
+    <!-- Modal README -->
+    <div id="readme-modal" class="readme-modal">
+      <div class="readme-container">
+        <div class="readme-header">
+          <h2>README del proyecto</h2>
+          <button id="readme-close" class="readme-close" type="button">×</button>
+        </div>
+        <div id="readme-content" class="readme-content"></div>
+      </div>
+    </div>
   </main>
 
 <?php
-$scripts = ['/assets/js/albums.js'];
+$scripts = ['/assets/js/albums.js', '/assets/js/readme.js'];
 require __DIR__ . '/footer.php';
