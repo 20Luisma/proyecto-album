@@ -18,8 +18,6 @@ Thumbs.db
 *.bak
 
 # Configuración local
-.env
-/.vscode/
 /.idea/
 
 # Storage y backups
@@ -65,7 +63,3 @@ phpunit.xml.dist
 *.secret
 *.bakup
 *.old
-clean-marvel/.env
-.env
-clean-marvel/.env
-.env
