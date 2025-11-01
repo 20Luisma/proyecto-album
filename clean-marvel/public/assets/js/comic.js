@@ -1,4 +1,5 @@
 import { formatDateTime, showMessage } from '/assets/js/main.js';
+import { MSC } from '/assets/js/microservice-communication.js';
 
 const heroGrid = document.getElementById('comic-heroes-grid');
 const heroSearchInput = document.getElementById('comic-hero-search');
@@ -53,6 +54,8 @@ const activityState = {
   index: -1
 };
 
+const ACTIVITY_STORAGE_KEY = 'comic-activity-state';
+
 let slideshowInterval = null;
 
 const ACTIVITY_STYLES = {
@@ -101,6 +104,25 @@ function hideCommunicationPanel() {
   }
 }
 
+/* 🔵 1) CLICK DEL BOTÓN: mostrar HUD YA */
+if (comicGenerateButton) {
+  comicGenerateButton.addEventListener('click', () => {
+    if (isGeneratingComic) return;
+    if (typeof MSC !== 'undefined' && typeof MSC.showPanel === 'function') {
+      MSC.showPanel();
+      if (typeof MSC.setStep === 'function') {
+        MSC.setStep('send'); // primer paso visible
+      }
+      // opcional: pasamos a process un pelín después para que se note
+      setTimeout(() => {
+        if (typeof MSC.setStep === 'function') {
+          MSC.setStep('process');
+        }
+      }, 200);
+    }
+  });
+}
+
 function clearGeneratedComic() {
   if (slideshowInterval) clearInterval(slideshowInterval);
 
@@ -127,42 +149,42 @@ function clearGeneratedComic() {
 
 let currentSlide = 0;
 function showSlide(index) {
-    const slides = slideshowContainer.children;
-    if (!slides || slides.length === 0) return;
-    Array.from(slides).forEach((slide, i) => {
-        slide.classList.toggle('hidden', i !== index);
-    });
+  const slides = slideshowContainer.children;
+  if (!slides || slides.length === 0) return;
+  Array.from(slides).forEach((slide, i) => {
+    slide.classList.toggle('hidden', i !== index);
+  });
 }
 
 function nextSlide() {
-    const slides = slideshowContainer.children;
-    if (!slides || slides.length <= 1) return;
-    currentSlide = (currentSlide + 1) % slides.length;
-    showSlide(currentSlide);
+  const slides = slideshowContainer.children;
+  if (!slides || slides.length <= 1) return;
+  currentSlide = (currentSlide + 1) % slides.length;
+  showSlide(currentSlide);
 }
 
 slideshowPrev.addEventListener('click', () => {
-    const slides = slideshowContainer.children;
-    if (!slides || slides.length <= 1) return;
-    currentSlide = (currentSlide - 1 + slides.length) % slides.length;
-    showSlide(currentSlide);
-    if (slideshowInterval) {
-        clearInterval(slideshowInterval);
-        slideshowInterval = setInterval(nextSlide, 3000);
-    }
+  const slides = slideshowContainer.children;
+  if (!slides || slides.length <= 1) return;
+  currentSlide = (currentSlide - 1 + slides.length) % slides.length;
+  showSlide(currentSlide);
+  if (slideshowInterval) {
+    clearInterval(slideshowInterval);
+    slideshowInterval = setInterval(nextSlide, 3000);
+  }
 });
 
 slideshowNext.addEventListener('click', () => {
-    nextSlide();
-    if (slideshowInterval) {
-        clearInterval(slideshowInterval);
-        slideshowInterval = setInterval(nextSlide, 3000);
-    }
+  nextSlide();
+  if (slideshowInterval) {
+    clearInterval(slideshowInterval);
+    slideshowInterval = setInterval(nextSlide, 3000);
+  }
 });
 
 closeComicResultButton.addEventListener('click', () => {
-    resetSelections();
-    clearGeneratedComic();
+  resetSelections();
+  clearGeneratedComic();
 });
 
 function renderGeneratedComic(data) {
@@ -184,30 +206,30 @@ function renderGeneratedComic(data) {
 
   const selectedHeroes = Array.from(heroState.selected.values());
   if (slideshowContainer) {
-      slideshowContainer.innerHTML = '';
-      if (selectedHeroes.length > 0) {
-        selectedHeroes.forEach((hero, index) => {
-            const slide = document.createElement('div');
-            slide.className = 'transition-opacity duration-700 ease-in-out';
-            if (index !== 0) slide.classList.add('hidden');
-            slide.innerHTML = `<img src="${hero.imagen}" class="absolute block w-full h-full object-cover" alt="${hero.nombre}">`;
-            slideshowContainer.appendChild(slide);
-        });
-      }
+    slideshowContainer.innerHTML = '';
+    if (selectedHeroes.length > 0) {
+      selectedHeroes.forEach((hero, index) => {
+        const slide = document.createElement('div');
+        slide.className = 'transition-opacity duration-700 ease-in-out';
+        if (index !== 0) slide.classList.add('hidden');
+        slide.innerHTML = `<img src="${hero.imagen}" class="absolute block w-full h-full object-cover" alt="${hero.nombre}">`;
+        slideshowContainer.appendChild(slide);
+      });
+    }
 
-      const slides = slideshowContainer.children;
-      if (slides.length > 1) {
-          slideshowPrev.classList.remove('hidden');
-          slideshowNext.classList.remove('hidden');
-          if (slideshowInterval) clearInterval(slideshowInterval);
-          slideshowInterval = setInterval(nextSlide, 3000);
-      } else {
-          slideshowPrev.classList.add('hidden');
-          slideshowNext.classList.add('hidden');
-          if (slideshowInterval) clearInterval(slideshowInterval);
-      }
-      currentSlide = 0;
-      showSlide(0);
+    const slides = slideshowContainer.children;
+    if (slides.length > 1) {
+      slideshowPrev.classList.remove('hidden');
+      slideshowNext.classList.remove('hidden');
+      if (slideshowInterval) clearInterval(slideshowInterval);
+      slideshowInterval = setInterval(nextSlide, 3000);
+    } else {
+      slideshowPrev.classList.add('hidden');
+      slideshowNext.classList.add('hidden');
+      if (slideshowInterval) clearInterval(slideshowInterval);
+    }
+    currentSlide = 0;
+    showSlide(0);
   }
 
   if (comicOutputStorySummary) {
@@ -279,9 +301,55 @@ function updateActivityView() {
   activityTitle.textContent = entry.message;
 }
 
+function persistActivityState() {
+  if (typeof localStorage === 'undefined') return;
+  try {
+    const payload = {
+      entries: activityState.entries.map(entry => ({
+        ...entry,
+        date: entry.date instanceof Date ? entry.date.toISOString() : entry.date
+      })),
+      index: activityState.index
+    };
+    localStorage.setItem(ACTIVITY_STORAGE_KEY, JSON.stringify(payload));
+  } catch (error) {
+    console.error('No se pudo guardar la actividad.', error);
+  }
+}
+
+function hydrateActivityState() {
+  if (typeof localStorage === 'undefined') return;
+  try {
+    const raw = localStorage.getItem(ACTIVITY_STORAGE_KEY);
+    if (!raw) return;
+    const payload = JSON.parse(raw);
+    if (!payload || !Array.isArray(payload.entries)) return;
+
+    activityState.entries = payload.entries.map(entry => ({
+      ...entry,
+      date: entry.date ? new Date(entry.date) : new Date()
+    }));
+    if (activityState.entries.length === 0) {
+      activityState.index = -1;
+      return;
+    }
+    const storedIndex = typeof payload.index === 'number' ? payload.index : activityState.entries.length - 1;
+    activityState.index = Math.min(Math.max(storedIndex, 0), activityState.entries.length - 1);
+  } catch (error) {
+    console.error('No se pudo restaurar la actividad.', error);
+    activityState.entries = [];
+    activityState.index = -1;
+  }
+}
+
 function pushActivity(entry) {
-  activityState.entries.push(entry);
+  const normalizedEntry = {
+    ...entry,
+    date: entry.date instanceof Date ? entry.date : new Date(entry.date || Date.now())
+  };
+  activityState.entries.push(normalizedEntry);
   activityState.index = activityState.entries.length - 1;
+  persistActivityState();
   updateActivityView();
 }
 
@@ -289,6 +357,7 @@ function handleActivityNavigation(direction) {
   const total = activityState.entries.length;
   if (total === 0) return;
   activityState.index = (activityState.index + direction + total) % total;
+  persistActivityState();
   updateActivityView();
 }
 
@@ -297,6 +366,7 @@ activityNextButton.addEventListener('click', () => handleActivityNavigation(1));
 activityClearButton.addEventListener('click', () => {
   activityState.entries = [];
   activityState.index = -1;
+  persistActivityState();
   updateActivityView();
 });
 
@@ -450,6 +520,7 @@ comicCancelButton.addEventListener('click', () => {
   showMessage(comicMessage, 'Se limpió la selección y el resultado generado.');
 });
 
+/* 🔵 2) SUBMIT: forzamos HUD + pasamos a process */
 comicForm.addEventListener('submit', async (event) => {
   event.preventDefault();
   if (isGeneratingComic) return;
@@ -457,14 +528,35 @@ comicForm.addEventListener('submit', async (event) => {
   const selectedHeroes = Array.from(heroState.selected.values());
   if (selectedHeroes.length === 0) {
     showMessage(comicMessage, 'Selecciona al menos un héroe antes de generar el cómic.', true);
+    hideCommunicationPanel();
     return;
+  }
+
+  // Aseguramos que las secciones donde vive el HUD sean visibles antes de mostrarlo
+  if (comicStorySection) {
+    comicStorySection.classList.remove('hidden');
+  }
+  if (comicSlideshowSection) {
+    comicSlideshowSection.classList.remove('hidden');
+  }
+
+  // forzamos HUD por si el click no se disparó
+  if (typeof MSC !== 'undefined') {
+    if (typeof MSC.showPanel === 'function') {
+      MSC.showPanel();
+    }
+    if (typeof MSC.setStep === 'function') {
+      MSC.setStep('send');
+      setTimeout(() => {
+        if (typeof MSC.setStep === 'function') {
+          MSC.setStep('process');
+        }
+      }, 200);
+    }
   }
 
   setGeneratingState(true);
   showMessage(comicMessage, 'Generando cómic con IA, esto puede tardar unos segundos...');
-  if (typeof MSC !== 'undefined' && typeof MSC.showPanel === 'function') {
-    MSC.showPanel();
-  }
 
   try {
     const response = await fetch('/comics/generate', {
@@ -485,9 +577,18 @@ comicForm.addEventListener('submit', async (event) => {
       throw new Error(errorMessage);
     }
 
-    if (typeof MSC !== 'undefined' && typeof MSC.markSuccess === 'function') {
-      MSC.markSuccess();
+    /* 🔵 3) AQUÍ metemos el delay para que se vean los pasos */
+    if (typeof MSC !== 'undefined') {
+      if (typeof MSC.setStep === 'function') {
+        MSC.setStep('return'); // ya volvió del 8081
+      }
+      setTimeout(() => {
+        if (typeof MSC.markSuccess === 'function') {
+          MSC.markSuccess();
+        }
+      }, 550); // medio segundo para que el ojo lo vea
     }
+
     renderGeneratedComic(payload.datos);
 
     const storyTitle = payload?.datos?.story?.title || 'tu cómic';
@@ -536,5 +637,6 @@ async function loadHeroes() {
 document.addEventListener('DOMContentLoaded', () => {
   clearGeneratedComic();
   loadHeroes();
+  hydrateActivityState();
   updateActivityView();
 });
