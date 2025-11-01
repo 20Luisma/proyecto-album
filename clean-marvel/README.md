@@ -56,7 +56,7 @@ Este conjunto de prácticas convierte Clean Marvel Album en una **base sólida p
 ## 3. Estructura de carpetas
 
 ```text
-clean-marvel/
+clean-marvel-album/
 ├── public/
 │   ├── assets/             # CSS, JS, UI
 │   ├── uploads/            # Portadas de álbumes
@@ -70,9 +70,14 @@ clean-marvel/
 │   ├── Notifications/      # Módulo de notificaciones/eventos
 │   └── Shared/             # Router, EventBus, helpers compartidos
 │
+├── openai-service/         # ⬅️ NUEVO: microservicio PHP separado (8081)
+│   ├── public/             # punto de entrada del microservicio
+│   └── src/                # Router, Controller y cliente a OpenAI
+│
 ├── storage/                # Persistencia JSON (MVP, intercambiable por DB)
 ├── tests/                  # PHPUnit
 ├── docs/                   # Requerimientos, diagramas UML, especificaciones
+├── .vscode/                # Tasks de VS Code (8080 y 8081)
 ├── composer.json           # Dependencias y autoload PSR-4
 ├── phpunit.xml.dist
 └── .env.example            # Ejemplo de variables de entorno (NO se sube el real)
@@ -150,9 +155,11 @@ STORAGE_PATH=storage
 ```
 
 ### 📍 Cómo usarlo
+
 ```bash
 cp .env.example .env
 ```
+
 Luego edita con tus datos.  
 El archivo `.env` está en `.gitignore` y **no debe subirse** nunca al repositorio.
 
@@ -177,39 +184,79 @@ El archivo `.env` está en `.gitignore` y **no debe subirse** nunca al repositor
 
 El proyecto incluye **tareas automáticas** definidas en `.vscode/tasks.json` para acelerar el desarrollo:
 
-- 🚀 **Levantar servidor local**  
+- 🚀 **Run Main App (8080)** → levanta el servidor principal  
+- 🤖 **Run OpenAI Service (8081)** → levanta el microservicio de IA  
+- 🟣 **Run Both (8080 + 8081)** → lanza los dos en paralelo  
 - 🧪 **Ejecutar PHPUnit**  
-- 🔍 **Ejecutar PHPStan**  
-- 🧰 **Validar Composer**  
-- ⚙️ **QA completo (tests + análisis)**  
-- ⬆️ **Push estandarizado a GitHub** (sin escribir comandos)
-
-Estas tasks permiten mantener un flujo de trabajo limpio, automatizado y reproducible entre desarrolladores.
+- 🔍 **PHPStan / Análisis estático**  
+- ⬆️ **Push estandarizado a GitHub**
 
 ---
 
 ## 10. Documentación y diagramas (`/docs`)
 
-En la carpeta `/docs` se incluyen todos los **documentos técnicos** relacionados con el proyecto:
-- Requerimientos funcionales y no funcionales.  
-- Diagramas **UML de clases, casos de uso y componentes**.  
-- Especificaciones de arquitectura y notas de diseño.
-
-Esto facilita la comprensión del proyecto y su evolución a futuras versiones (por ejemplo, migración a SQLite o microservicios).
+Incluye documentación técnica, requerimientos y diagramas UML de arquitectura.
 
 ---
 
 ## 11. Roadmap técnico
 
-- Router dedicado (`src/Shared/Http/Router.php`)  
-- Sustitución de JSON por **SQLite**  
-- Microservicio PHP para **OpenAI**  
-- Autenticación básica  
-- CI local con tasks obligatorios
+- ✅ Router dedicado (`src/Shared/Http/Router.php`)  
+- ✅ Microservicio PHP para **OpenAI** (`openai-service/`, puerto 8081)  
+- 🔜 Sustitución de JSON por SQLite  
+- 🔜 Autenticación básica  
+- 🔜 CI local con tasks obligatorios
+
+---
+
+## 12. Microservicio OpenAI (8081)
+
+El proyecto incorpora un **microservicio PHP independiente** que centraliza toda la comunicación con la API de OpenAI.
+
+### 📍 Ubicación
+
+`clean-marvel-album/openai-service/`
+
+### 🚀 Cómo levantarlo
+
+```bash
+php -S localhost:8081 -t openai-service/public
+```
+
+### 🔗 Endpoint expuesto
+
+**POST** `http://localhost:8081/v1/chat`
+
+```json
+{
+  "messages": [
+    { "role": "system", "content": "Eres un narrador de cómics de Marvel. Responde en español." },
+    { "role": "user", "content": "Genera una escena con Iron Man y Rocket en Nueva York." }
+  ]
+}
+```
+
+### 💡 Uso desde la app principal
+
+```php
+$ch = curl_init('http://localhost:8081/v1/chat');
+curl_setopt($ch, CURLOPT_POST, true);
+curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode([
+    'messages' => [
+        ['role' => 'system', 'content' => 'Eres un narrador de cómics de Marvel.'],
+        ['role' => 'user', 'content' => 'Crea una escena con Spider-Man y Hulk.']
+    ]
+]));
+$response = curl_exec($ch);
+curl_close($ch);
+$data = json_decode($response ?? '[]', true);
+```
 
 ---
 
 ## Autor
 
 **Luis Martín Pallante**  
-con la ayuda de **Alfred –- asistente copiloto IA**
+con la ayuda de **Alfred – asistente copiloto IA** 🦾
