@@ -17,11 +17,11 @@ Este proyecto sigue esa idea porque:
 
 1. **Las reglas de negocio están en `src/Albums`, `src/Heroes` y `src/Notifications`** (dominio + aplicación), NO en `public/`.
 2. **La web es un detalle**: `public/index.php` solo recibe la request y la pasa al **Router** → **Controller** → **Caso de uso**.
-3. **Las dependencias apuntan hacia dentro**: la capa de fuera (Presentación) conoce a la de dentro (Aplicación), pero **el Dominio no conoce la infraestructura**. Esto es clave.
+3. **Las dependencias apuntan hacia dentro**: la capa de fuera (Presentación) conoce a la de dentro (Aplicación), pero **el Dominio no conoce la infraestructura**.
 4. **Los repositorios son interfaces en el dominio**, y las implementaciones concretas (hoy JSON, mañana SQLite/MySQL) están en Infraestructura.
 5. **Los eventos de dominio** se publican sin saber quién los va a escuchar (EventBus en memoria): esto muestra **desacoplamiento**.
 
-En limpio, la app queda así:
+Estructura conceptual:
 
 ```text
 Presentation (public/, src/Controllers)
@@ -33,28 +33,23 @@ Domain (Entidades, Repositorios, Eventos)
 Infrastructure (JSON, EventBus, próximamente SQLite)
 ```
 
-- **Presentation**: solo orquesta requests/responses.
-- **Application**: usa el dominio para hacer cosas concretas.
-- **Domain**: conoce las reglas de negocio.
-- **Infrastructure**: sabe “cómo” se guardan las cosas.
-
-👉 Eso es lo que hace que puedas mover de JSON a SQLite **sin tocar** `Album.php` o `Hero.php`. Eso es Clean.
+👉 Esto permite cambiar tecnologías sin romper el núcleo de negocio.
 
 ---
 
 ## 2. Buenas prácticas que ejecuta este proyecto
 
-- ✅ **Front Controller único** (`public/index.php`): toda la app entra por ahí.
-- ✅ **Código de negocio fuera de `public/`**: nada de “controladores sueltos” en la carpeta pública.
-- ✅ **PSR-4 / Autoload con Composer**: namespaces bajo `Src\` mapeados a `src/`.
-- ✅ **Inyección de dependencias centralizada** en `src/bootstrap.php`: ahí se “arma” la app y se deciden las implementaciones reales.
-- ✅ **Repositorios desacoplados**: el dominio define interfaces; Infra las implementa.
-- ✅ **EventBus en memoria**: cuando pasa algo (crear álbum, héroe…), se publica un evento → limpio, extensible.
-- ✅ **Tests con PHPUnit**: `vendor/bin/phpunit --testdox`.
-- ✅ **Análisis estático con PHPStan**: para mantener calidad.
-- ✅ **Tasks de VS Code**: para automatizar servidor, tests, push, etc.
+- ✅ **Front Controller único** (`public/index.php`): toda la app entra por ahí.  
+- ✅ **Código de negocio fuera de `public/`**: separación clara de responsabilidades.  
+- ✅ **PSR-4 / Autoload con Composer**: namespaces bajo `Src\` mapeados a `src/`.  
+- ✅ **Inyección de dependencias centralizada** (`src/bootstrap.php`).  
+- ✅ **Repositorios desacoplados**: dominio define interfaces, infraestructura implementa.  
+- ✅ **EventBus en memoria** para comunicar módulos sin dependencias directas.  
+- ✅ **Tests con PHPUnit** y **análisis estático con PHPStan**.  
+- ✅ **Tasks de VS Code personalizadas**: ejecutar servidor, tests, QA completo y subir cambios con un solo clic.  
+- ✅ **Documentación técnica en `/docs`**: incluye requerimientos funcionales y diagramas UML generados durante el diseño.
 
-Esto demuestra que no es solo “un PHP con carpetas”, sino un **ejercicio de arquitectura**.
+Este conjunto de prácticas convierte Clean Marvel Album en una **base sólida para aprender y aplicar Arquitectura Limpia en PHP moderno**.
 
 ---
 
@@ -68,15 +63,16 @@ clean-marvel/
 │   └── index.php           # Front controller (única entrada)
 │
 ├── src/
-│   ├── bootstrap.php       # Inyección de dependencias (contendor casero)
+│   ├── bootstrap.php       # Inyección de dependencias
 │   ├── Controllers/        # Controladores HTTP
-│   ├── Albums/             # Módulo de Álbumes (Domain + Application + Infra del módulo)
+│   ├── Albums/             # Módulo de Álbumes (Domain + Application + Infra)
 │   ├── Heroes/             # Módulo de Héroes
 │   ├── Notifications/      # Módulo de notificaciones/eventos
 │   └── Shared/             # Router, EventBus, helpers compartidos
 │
-├── storage/                # Persistencia JSON (MVP, se puede cambiar por DB)
+├── storage/                # Persistencia JSON (MVP, intercambiable por DB)
 ├── tests/                  # PHPUnit
+├── docs/                   # Requerimientos, diagramas UML, especificaciones
 ├── composer.json           # Dependencias y autoload PSR-4
 ├── phpunit.xml.dist
 └── .env.example            # Ejemplo de variables de entorno (NO se sube el real)
@@ -86,11 +82,11 @@ clean-marvel/
 
 ## 4. Requisitos
 
-- PHP **8.2** o superior  
+- PHP **8.2+**  
 - **Composer** instalado  
-- Extensiones PHP típicas (`json`, `mbstring`, `pdo` si vas a usar DB)  
-- (Opcional) VS Code con tasks  
-- (Opcional) Servidor embebido de PHP
+- Extensiones PHP: `json`, `mbstring`, `pdo`  
+- (Opcional) **VS Code** con soporte de Tasks  
+- (Opcional) **Servidor embebido** de PHP
 
 ---
 
@@ -107,67 +103,58 @@ composer install
 # 3. Crear el archivo .env a partir del ejemplo
 cp .env.example .env
 
-# 4. Levantar el servidor
+# 4. Levantar el servidor local
 php -S localhost:8080 -t public
 
-# 5. Abrir en el navegador
+# 5. Abrir en navegador
 http://localhost:8080/
 ```
 
-👉 **IMPORTANTE**  
-- La carpeta **`vendor/` NO se sube a Git** (se regenera con `composer install`).  
-- El archivo **`.env` TAMPOCO se sube a Git** (contiene datos sensibles).
+> 💡 **Nota:**  
+> - La carpeta `vendor/` **no se sube al repositorio** (se regenera con `composer install`).  
+> - El archivo `.env` **tampoco se sube** (contiene claves privadas).
 
 ---
 
-## 6. Por qué `vendor/` no se sube
+## 6. Dependencias (`vendor/`) y autoload
 
-`vendor/` contiene todas las dependencias externas instaladas con Composer.  
-Subirla haría el repositorio innecesariamente pesado.  
-Por buenas prácticas, solo se versionan:
+`vendor/` contiene todas las librerías externas instaladas por Composer.  
+No se incluye en GitHub porque pesa mucho y se puede regenerar fácilmente.
 
-- `composer.json` → lista de dependencias.  
-- `composer.lock` → versiones exactas instaladas.
+Solo se suben:
+- `composer.json` → dependencias declaradas  
+- `composer.lock` → versiones exactas
 
-Ejecutando `composer install` en cualquier entorno se regenerará `vendor/` igual que en el original.
-
-```bash
-> 💡 Nota: la carpeta `vendor/` está en .gitignore y NO se sube al repositorio.
-```
+Ejecutando `composer install` se recrea todo el entorno de dependencias idéntico.
 
 ---
 
-## 7. Archivo `.env`: configuración y API keys
+## 7. Archivo `.env` – Configuración y API Keys
 
-El archivo `.env` guarda configuraciones privadas como claves API, tokens o credenciales.  
-Por seguridad **nunca debe subirse** al repositorio.
+El archivo `.env` almacena configuraciones sensibles como claves de API (por ejemplo, la de **OpenAI**).
 
-### 🧩 Ejemplo de `.env.example`
+### 📘 Ejemplo de `.env.example`
 
 ```env
 APP_ENV=local
 APP_DEBUG=true
-
-# Puertos / rutas
 APP_URL=http://localhost:8080
 
-# OpenAI / IA / servicios externos
+# Claves de servicios externos
 OPENAI_API_KEY=pon-aqui-tu-api-key
 OPENAI_MODEL=gpt-4o-mini
 
-# Storage
+# Persistencia
 STORAGE_DRIVER=json
 STORAGE_PATH=storage
 ```
 
-### 📌 Cómo usarlo
-
-1. Copiá el archivo de ejemplo:
-   ```bash
-   cp .env.example .env
-   ```
-2. Reemplazá los valores por tus claves reales.
-3. Asegurate de que `.env` está incluido en `.gitignore` para no subirlo nunca.
+### 📍 Cómo usarlo
+```bash
+cp .env.example .env
+```
+Luego edita con tus datos.  
+El archivo `.env` está en `.gitignore` y **no debe subirse** nunca al repositorio.
 
 ---
 
@@ -188,19 +175,36 @@ STORAGE_PATH=storage
 
 ## 9. Tasks de VS Code
 
-- **Levantar server**: `php -S localhost:8080 -t public`  
-- **Tests**: `vendor/bin/phpunit --testdox`  
-- **PHPStan**: `vendor/bin/phpstan analyse --memory-limit=512M`  
-- **Push estándar**: copia README → commit → push automático.
+El proyecto incluye **tareas automáticas** definidas en `.vscode/tasks.json` para acelerar el desarrollo:
+
+- 🚀 **Levantar servidor local**  
+- 🧪 **Ejecutar PHPUnit**  
+- 🔍 **Ejecutar PHPStan**  
+- 🧰 **Validar Composer**  
+- ⚙️ **QA completo (tests + análisis)**  
+- ⬆️ **Push estandarizado a GitHub** (sin escribir comandos)
+
+Estas tasks permiten mantener un flujo de trabajo limpio, automatizado y reproducible entre desarrolladores.
 
 ---
 
-## 10. Roadmap técnico
+## 10. Documentación y diagramas (`/docs`)
 
-- Router 100% desacoplado (`src/Shared/Http/Router.php`)
-- Sustitución de JSON por **SQLite**
-- Microservicio PHP para **OpenAI**
-- Autenticación básica (proteger endpoints)
+En la carpeta `/docs` se incluyen todos los **documentos técnicos** relacionados con el proyecto:
+- Requerimientos funcionales y no funcionales.  
+- Diagramas **UML de clases, casos de uso y componentes**.  
+- Especificaciones de arquitectura y notas de diseño.
+
+Esto facilita la comprensión del proyecto y su evolución a futuras versiones (por ejemplo, migración a SQLite o microservicios).
+
+---
+
+## 11. Roadmap técnico
+
+- Router dedicado (`src/Shared/Http/Router.php`)  
+- Sustitución de JSON por **SQLite**  
+- Microservicio PHP para **OpenAI**  
+- Autenticación básica  
 - CI local con tasks obligatorios
 
 ---
