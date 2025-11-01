@@ -4,41 +4,41 @@ declare(strict_types=1);
 
 namespace Creawebes\OpenAI\Controller;
 
-use Creawebes\OpenAI\Service\OpenAIClient;
+use Creawebes\OpenAI\Service\OpenAIChatService;
+use Throwable;
 
-class OpenAIController
+final class OpenAIController
 {
+    public function __construct(
+        private readonly OpenAIChatService $chatService
+    ) {
+    }
+
+    /**
+     * Maneja POST /v1/chat.
+     */
     public function chat(): void
     {
-        header('Content-Type: application/json');
+        $raw = file_get_contents('php://input') ?: '';
+        $data = json_decode($raw, true) ?? [];
 
-        $payload = file_get_contents('php://input') ?: '';
-        $data = json_decode($payload, true);
-
-        if (!is_array($data)) {
-            http_response_code(400);
-            echo json_encode(['error' => 'Invalid JSON payload']);
-            return;
-        }
-
-        $messages = $data['messages'] ?? null;
-
-        if (!is_array($messages)) {
-            http_response_code(400);
-            echo json_encode(['error' => 'Messages must be provided as an array']);
-            return;
-        }
-
-        $model = isset($data['model']) ? (string) $data['model'] : null;
+        $messages = $data['messages'] ?? [];
 
         try {
-            $client = new OpenAIClient();
-            $result = $client->chat($messages, $model);
+            $story = $this->chatService->generateStory($messages);
 
-            echo json_encode($result);
-        } catch (\Throwable $exception) {
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode([
+                'ok' => true,
+                'content' => $story,
+            ], JSON_UNESCAPED_UNICODE);
+        } catch (Throwable $exception) {
             http_response_code(500);
-            echo json_encode(['error' => $exception->getMessage()]);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode([
+                'ok' => false,
+                'error' => $exception->getMessage(),
+            ], JSON_UNESCAPED_UNICODE);
         }
     }
 }

@@ -2,7 +2,7 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "🚀 Iniciar servidor PHP",
+      "label": "🚀 Iniciar servidor PHP (8080)",
       "type": "shell",
       "command": "php",
       "args": [
@@ -12,7 +12,7 @@
         "public"
       ],
       "options": {
-        "cwd": "${workspaceFolder}"
+        "cwd": "${workspaceFolder}/clean-marvel"
       },
       "presentation": {
         "reveal": "always",
@@ -29,7 +29,7 @@
         "--testdox"
       ],
       "options": {
-        "cwd": "${workspaceFolder}"
+        "cwd": "${workspaceFolder}/clean-marvel"
       },
       "presentation": {
         "reveal": "always",
@@ -46,7 +46,7 @@
         "--memory-limit=512M"
       ],
       "options": {
-        "cwd": "${workspaceFolder}"
+        "cwd": "${workspaceFolder}/clean-marvel"
       },
       "presentation": {
         "reveal": "always",
@@ -62,7 +62,7 @@
         "validate"
       ],
       "options": {
-        "cwd": "${workspaceFolder}"
+        "cwd": "${workspaceFolder}/clean-marvel"
       },
       "presentation": {
         "reveal": "always",
@@ -84,7 +84,6 @@
       },
       "problemMatcher": []
     },
-
     {
       "label": "⬆️ Git: add + commit + push (actualiza ambos README)",
       "type": "shell",
@@ -102,7 +101,6 @@
       },
       "problemMatcher": []
     },
-
     {
       "label": "🧹 Git: limpiar archivos eliminados (repo raíz)",
       "type": "shell",
@@ -121,10 +119,32 @@
       "problemMatcher": []
     },
     {
-      "label": "▶️ Servidor (por defecto)",
-      "dependsOn": [
-        "🚀 Iniciar servidor PHP"
+      "label": "🤖 Run OpenAI Service (8081)",
+      "type": "shell",
+      "command": "php",
+      "args": [
+        "-S",
+        "localhost:8081",
+        "-t",
+        "public"
       ],
+      "options": {
+        "cwd": "${workspaceFolder}/clean-marvel/openai-service"
+      },
+      "isBackground": true,
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "▶️ Run Both (8080 + 8081)",
+      "dependsOn": [
+        "🚀 Iniciar servidor PHP (8080)",
+        "🤖 Run OpenAI Service (8081)"
+      ],
+      "dependsOrder": "parallel",
       "group": {
         "kind": "build",
         "isDefault": true
@@ -132,25 +152,6 @@
       "presentation": {
         "reveal": "always",
         "panel": "shared"
-      }
-    },
-    {
-      "label": "Run OpenAI Service (8081)",
-      "type": "shell",
-      "command": "php -S localhost:8081 -t openai-service/public",
-      "isBackground": true,
-      "problemMatcher": []
-    },
-    {
-      "label": "Run Both (8080 + 8081)",
-      "dependsOn": [
-        "🚀 Iniciar servidor PHP",
-        "Run OpenAI Service (8081)"
-      ],
-      "dependsOrder": "parallel",
-      "group": {
-        "kind": "build",
-        "isDefault": true
       }
     }
   ]

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Creawebes\OpenAI\Http;
 
 use Creawebes\OpenAI\Controller\OpenAIController;
+use Creawebes\OpenAI\Service\OpenAIChatService;
 
 class Router
 {
@@ -19,7 +20,7 @@ class Router
         }
 
         if (strtoupper($method) === 'POST' && $path === '/v1/chat') {
-            $controller = new OpenAIController();
+            $controller = new OpenAIController(new OpenAIChatService());
             $controller->chat();
             return;
         }

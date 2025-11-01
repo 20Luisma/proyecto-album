@@ -105,19 +105,25 @@ cd clean-marvel
 # 2. Instalar dependencias (esto crea vendor/)
 composer install
 
-# 3. Crear el archivo .env a partir del ejemplo
+# 3. Instalar dependencias del microservicio OpenAI
+cd openai-service
+composer install
+cd ..
+
+# 4. Crear el archivo .env a partir del ejemplo
 cp .env.example .env
 
-# 4. Levantar el servidor local
+# 5. Levantar el servidor local
 php -S localhost:8080 -t public
 
-# 5. Abrir en navegador
+# 6. Abrir en navegador
 http://localhost:8080/
 ```
 
 > 💡 **Nota:**  
 > - La carpeta `vendor/` **no se sube al repositorio** (se regenera con `composer install`).  
 > - El archivo `.env` **tampoco se sube** (contiene claves privadas).
+> - Para usar la IA debes generar también `openai-service/vendor/` ejecutando `composer install` dentro de esa carpeta.
 
 ---
 

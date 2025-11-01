@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\AI;
 
 use InvalidArgumentException;
+use JsonException;
 use RuntimeException;
 
 final class OpenAIComicGenerator
@@ -177,10 +178,65 @@ PROMPT,
             throw new RuntimeException('Microservicio OpenAI no disponible' . ($error !== '' ? ': ' . $error : ''));
         }
 
-        /** @var mixed $decoded */
-        $decoded = json_decode($response, true);
-        if (!is_array($decoded)) {
-            throw new RuntimeException('Respuesta no válida del microservicio de OpenAI.');
+        try {
+            /** @var array<string, mixed> $decoded */
+            $decoded = json_decode($response, true, 512, JSON_THROW_ON_ERROR);
+        } catch (JsonException $exception) {
+            $snippet = trim((string) substr($response, 0, 200));
+            $details = $snippet !== '' ? ' Contenido recibido: ' . $snippet : '';
+            throw new RuntimeException('Respuesta no válida del microservicio de OpenAI.' . $details, 0, $exception);
+        }
+
+        if (isset($decoded['error'])) {
+            $error = $decoded['error'];
+
+            if (is_array($error)) {
+                $error = $error['message'] ?? json_encode($error, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            }
+
+            if (!is_string($error)) {
+                $error = 'Error desconocido';
+            }
+
+            throw new RuntimeException('Microservicio OpenAI no disponible: ' . $error);
+        }
+
+        if (isset($decoded['ok'])) {
+            if ($decoded['ok'] !== true) {
+                $message = $decoded['error'] ?? 'Error desconocido';
+                if (is_array($message)) {
+                    $message = $message['message'] ?? json_encode($message, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                }
+
+                if (!is_string($message)) {
+                    $message = 'Error desconocido';
+                }
+
+                throw new RuntimeException('Microservicio OpenAI no disponible: ' . $message);
+            }
+
+            $raw = $decoded['raw'] ?? null;
+            if (is_array($raw)) {
+                return $raw;
+            }
+
+            $contentKeys = ['content', 'story', 'text'];
+            foreach ($contentKeys as $key) {
+                $value = $decoded[$key] ?? null;
+                if (is_string($value) && trim($value) !== '') {
+                    return [
+                        'choices' => [
+                            [
+                                'message' => [
+                                    'content' => $value,
+                                ],
+                            ],
+                        ],
+                    ];
+                }
+            }
+
+            throw new RuntimeException('Respuesta del microservicio no contenía datos de historia.');
         }
 
         return $decoded;
