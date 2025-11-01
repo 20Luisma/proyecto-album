@@ -63,3 +63,5 @@ phpunit.xml.dist
 *.secret
 *.bakup
 *.old
+/.env
+/openai-service/.env

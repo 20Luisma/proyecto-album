@@ -12,7 +12,7 @@
         "public"
       ],
       "options": {
-        "cwd": "${workspaceFolder}/clean-marvel"
+        "cwd": "${workspaceFolder}"
       },
       "presentation": {
         "reveal": "always",
@@ -29,7 +29,7 @@
         "--testdox"
       ],
       "options": {
-        "cwd": "${workspaceFolder}/clean-marvel"
+        "cwd": "${workspaceFolder}"
       },
       "presentation": {
         "reveal": "always",
@@ -46,7 +46,7 @@
         "--memory-limit=512M"
       ],
       "options": {
-        "cwd": "${workspaceFolder}/clean-marvel"
+        "cwd": "${workspaceFolder}"
       },
       "presentation": {
         "reveal": "always",
@@ -62,7 +62,7 @@
         "validate"
       ],
       "options": {
-        "cwd": "${workspaceFolder}/clean-marvel"
+        "cwd": "${workspaceFolder}"
       },
       "presentation": {
         "reveal": "always",
@@ -129,7 +129,7 @@
         "public"
       ],
       "options": {
-        "cwd": "${workspaceFolder}/clean-marvel/openai-service"
+        "cwd": "${workspaceFolder}/openai-service"
       },
       "isBackground": true,
       "presentation": {
