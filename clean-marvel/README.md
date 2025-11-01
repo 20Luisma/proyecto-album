@@ -212,4 +212,4 @@ Esto facilita la comprensión del proyecto y su evolución a futuras versiones (
 ## Autor
 
 **Luis Martín Pallante**  
-con la ayuda de **Alfred – asistente copiloto IA**
+con la ayuda de **Alfred –- asistente copiloto IA**
