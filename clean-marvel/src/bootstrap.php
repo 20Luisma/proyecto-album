@@ -89,7 +89,7 @@ return (static function (): array {
     );
 
     $container['ai'] = [
-        'comicGenerator' => new OpenAIComicGenerator($_ENV['OPENAI_API_KEY'] ?? getenv('OPENAI_API_KEY') ?: ''),
+        'comicGenerator' => new OpenAIComicGenerator($_ENV['OPENAI_SERVICE_URL'] ?? getenv('OPENAI_SERVICE_URL') ?: null),
     ];
 
     $container['devTools'] = [

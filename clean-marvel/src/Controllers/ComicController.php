@@ -31,7 +31,7 @@ final class ComicController
         }
 
         if (!$this->generator->isConfigured()) {
-            JsonResponse::error('La generación con IA no está disponible. Configura OPENAI_API_KEY.', 503);
+            JsonResponse::error('La generación con IA no está disponible. Levanta el microservicio en http://localhost:8081.', 503);
             return;
         }
 

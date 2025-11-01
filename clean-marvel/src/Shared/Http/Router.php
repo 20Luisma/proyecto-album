@@ -247,7 +247,7 @@ final class Router
 
             $generator = $this->container['ai']['comicGenerator'] ?? null;
             if (!$generator instanceof OpenAIComicGenerator) {
-                $generator = new OpenAIComicGenerator('');
+                $generator = new OpenAIComicGenerator();
             }
 
             $this->comicController = new ComicController($generator, $useCases['findHero']);

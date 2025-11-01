@@ -10,15 +10,30 @@ use RuntimeException;
 final class OpenAIComicGenerator
 {
     private const STORY_MODEL = 'gpt-4o-mini';
-    private const CHAT_COMPLETIONS_ENDPOINT = 'https://api.openai.com/v1/chat/completions';
+    private const DEFAULT_SERVICE_URL = 'http://localhost:8081/v1/chat';
 
-    public function __construct(private readonly string $apiKey)
+    private readonly string $serviceUrl;
+
+    public function __construct(?string $serviceUrl = null)
     {
+        $resolved = $serviceUrl ?? ($_ENV['OPENAI_SERVICE_URL'] ?? null);
+        if ($resolved === null) {
+            $envValue = getenv('OPENAI_SERVICE_URL');
+            if (is_string($envValue) && $envValue !== '') {
+                $resolved = $envValue;
+            }
+        }
+
+        if (!is_string($resolved) || trim($resolved) === '') {
+            $resolved = self::DEFAULT_SERVICE_URL;
+        }
+
+        $this->serviceUrl = rtrim($resolved, '/');
     }
 
     public function isConfigured(): bool
     {
-        return trim($this->apiKey) !== '';
+        return $this->serviceUrl !== '';
     }
 
     /**
@@ -30,7 +45,7 @@ final class OpenAIComicGenerator
     public function generateComic(array $heroes): array
     {
         if (!$this->isConfigured()) {
-            throw new RuntimeException('OPENAI_API_KEY no está configurada. Añádela al entorno para habilitar la generación con IA.');
+            throw new RuntimeException('El microservicio de OpenAI no está configurado.');
         }
 
         if ($heroes === []) {
@@ -65,17 +80,15 @@ final class OpenAIComicGenerator
 
         $heroList = implode("\n", $heroDescriptions);
 
-        $payload = [
-            'model' => self::STORY_MODEL,
-            'messages' => [
-                [
-                    'role' => 'system',
-                    'content' => 'Eres un escritor y director creativo de cómics de Marvel. Generas historias épicas en español latino neutro.',
-                ],
-                [
-                    'role' => 'user',
-                    'content' => sprintf(
-                        <<<PROMPT
+        $messages = [
+            [
+                'role' => 'system',
+                'content' => 'Eres un escritor y director creativo de cómics de Marvel. Generas historias épicas en español latino neutro.',
+            ],
+            [
+                'role' => 'user',
+                'content' => sprintf(
+                    <<<PROMPT
 Genera una sinopsis y viñetas para un cómic corto protagonizado por los siguientes héroes:
 %s
 
@@ -95,17 +108,13 @@ Instrucciones:
   ]
 }
 PROMPT,
-                        $heroList
-                    ),
-                ],
-            ],
-            'response_format' => [
-                'type' => 'json_object',
+                    $heroList
+                ),
             ],
         ];
 
-        $response = $this->postJson(self::CHAT_COMPLETIONS_ENDPOINT, $payload);
-        
+        $response = $this->requestChat($messages, self::STORY_MODEL);
+
         $content = $response['choices'][0]['message']['content'] ?? '';
 
         /** @var array{title?: string, summary?: string, panels?: array<int, array{title?: string, description?: string, caption?: string}>} $decoded */
@@ -136,55 +145,44 @@ PROMPT,
     }
 
     /**
-     * @param array<string, mixed> $payload
+     * @param array<int, array{role: string, content: string}> $messages
      * @return array<string, mixed>
      */
-    private function postJson(string $endpoint, array $payload): array
+    private function requestChat(array $messages, ?string $model = null): array
     {
-        $body = json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-        if ($body === false) {
-            throw new RuntimeException('No se pudo codificar la petición para la IA.');
-        }
-
-        $headers = [
-            'Content-Type: application/json',
-            'Authorization: Bearer ' . $this->apiKey,
+        $payload = [
+            'messages' => $messages,
         ];
 
-        $curl = curl_init($endpoint);
-        if ($curl === false) {
-            throw new RuntimeException('No se pudo inicializar la petición HTTP.');
+        if ($model !== null) {
+            $payload['model'] = $model;
         }
 
-        curl_setopt_array($curl, [
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_POST => true,
-            CURLOPT_HTTPHEADER => $headers,
-            CURLOPT_POSTFIELDS => $body,
-            CURLOPT_TIMEOUT => 120,
-        ]);
+        $ch = curl_init($this->serviceUrl);
+        if ($ch === false) {
+            throw new RuntimeException('No se pudo inicializar la petición al microservicio de OpenAI.');
+        }
 
-        $response = curl_exec($curl);
-        $statusCode = curl_getinfo($curl, CURLINFO_RESPONSE_CODE);
-        $error = curl_error($curl);
-        curl_close($curl);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
 
-        if ($response === false) {
-            throw new RuntimeException('Error al conectar con OpenAI: ' . $error);
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $error = curl_error($ch);
+        curl_close($ch);
+
+        if ($response === false || $httpCode >= 500) {
+            throw new RuntimeException('Microservicio OpenAI no disponible' . ($error !== '' ? ': ' . $error : ''));
         }
 
         /** @var mixed $decoded */
         $decoded = json_decode($response, true);
         if (!is_array($decoded)) {
-            throw new RuntimeException('Respuesta no válida de OpenAI.');
-        }
-
-        if ($statusCode >= 400) {
-            $message = $decoded['error']['message'] ?? 'La API de OpenAI devolvió un error.';
-            throw new RuntimeException($message);
+            throw new RuntimeException('Respuesta no válida del microservicio de OpenAI.');
         }
 
         return $decoded;
     }
 }
-
