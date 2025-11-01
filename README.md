@@ -1,71 +1,60 @@
 # Clean Marvel Album – Arquitectura Clean en PHP 8.2
 
-**Clean Marvel Album** es una aplicación web desarrollada en **PHP 8.2** que implementa los principios de **Arquitectura Limpia (Clean Architecture)**, **DDD ligero** y **buenas prácticas de desacoplamiento**.  
-Su objetivo no es solo gestionar álbumes y héroes de Marvel, sino servir como **proyecto de referencia** para aplicar una arquitectura clara, módulos aislados y pruebas automatizadas en PHP moderno.
+**Clean Marvel Album** es una aplicación web en **PHP 8.2** pensada como ejemplo real de **Arquitectura Limpia (Clean Architecture)** aplicada a un dominio sencillo: **álbumes y héroes de Marvel**.
+
+El objetivo del proyecto **no es solo** mostrar una web que lista álbumes, sino enseñar **cómo estructurar un proyecto PHP moderno** para que:
+- el **dominio** no dependa del framework,
+- puedas **cambiar la base de datos** sin romper todo,
+- puedas exponer la misma lógica por **web, API o CLI**,
+- y puedas **testear** sin montar servidor.
 
 ---
 
-## 1. Arquitectura Clean aplicada
+## 1. ¿Por qué esto es una Arquitectura Clean?
 
-La app está organizada en capas claramente separadas, de fuera hacia dentro:
+La idea central de Clean Architecture es **proteger el core del negocio** (el dominio) de los detalles externos (web, BD, framework, UI).  
+Este proyecto sigue esa idea porque:
+
+1. **Las reglas de negocio están en `src/Albums`, `src/Heroes` y `src/Notifications`** (dominio + aplicación), NO en `public/`.
+2. **La web es un detalle**: `public/index.php` solo recibe la request y la pasa al **Router** → **Controller** → **Caso de uso**.
+3. **Las dependencias apuntan hacia dentro**: la capa de fuera (Presentación) conoce a la de dentro (Aplicación), pero **el Dominio no conoce la infraestructura**. Esto es clave.
+4. **Los repositorios son interfaces en el dominio**, y las implementaciones concretas (hoy JSON, mañana SQLite/MySQL) están en Infraestructura.
+5. **Los eventos de dominio** se publican sin saber quién los va a escuchar (EventBus en memoria): esto muestra **desacoplamiento**.
+
+En limpio, la app queda así:
 
 ```text
-Presentation (public/, src/Controllers)  →  Application (UseCases)  →  Domain (Entities, Repos)  →  Infrastructure (JSON, EventBus)
+Presentation (public/, src/Controllers)
+      ↓
+Application (UseCases, servicios de aplicación)
+      ↓
+Domain (Entidades, Repositorios, Eventos)
+      ↓
+Infrastructure (JSON, EventBus, próximamente SQLite)
 ```
 
-- **Capa de Presentación**  
-  - `public/index.php` actúa como **Front Controller**.  
-  - `src/Controllers/*` contiene los **controladores HTTP** que orquestan la request (no contienen lógica de negocio).  
-  - `PageController` atiende las rutas HTML visibles en navegador.
-  - El enrutado se está moviendo progresivamente a un **Router dedicado** (`src/Shared/Http/Router.php`) para que `index.php` quede muy delgado.
+- **Presentation**: solo orquesta requests/responses.
+- **Application**: usa el dominio para hacer cosas concretas.
+- **Domain**: conoce las reglas de negocio.
+- **Infrastructure**: sabe “cómo” se guardan las cosas.
 
-- **Capa de Aplicación**  
-  - Contiene los **casos de uso (Use Cases)**: crear álbum, listar, actualizar portada, crear héroe, borrar héroe, limpiar notificaciones, etc.  
-  - Aquí vive la **orquestación** de dominio, no la lógica de presentación.  
-  - Publica eventos de dominio cuando algo relevante ocurre (por ejemplo, “álbum actualizado”).
-
-- **Capa de Dominio**  
-  - Entidades ricas (`Album`, `Hero`) con sus invariantes.  
-  - Interfaces de repositorio (pueden tener implementación en JSON hoy y en SQLite mañana).  
-  - **Eventos de dominio** que luego escucha la capa superior de notificaciones.
-
-- **Capa de Infraestructura**  
-  - Repositorios que leen/escriben en JSON (`storage/*.json`).  
-  - `InMemoryEventBus` para no acoplar el dominio a la infraestructura.  
-  - Aquí es donde en el futuro se enchufará SQLite/MySQL sin tocar la capa de dominio.
-
-Esta separación permite:
-1. **Probar el dominio sin servidor web.**
-2. **Cambiar la persistencia sin tocar el dominio.**
-3. **Exponer la misma lógica vía API, CLI o Web sin duplicar código.**
+👉 Eso es lo que hace que puedas mover de JSON a SQLite **sin tocar** `Album.php` o `Hero.php`. Eso es Clean.
 
 ---
 
-## 2. Buenas prácticas que ya implementa
+## 2. Buenas prácticas que ejecuta este proyecto
 
-- ✅ **Front Controller único** en `public/index.php`  
-  No hay “PHP suelto” en el root: todo entra por `public/`.
+- ✅ **Front Controller único** (`public/index.php`): toda la app entra por ahí.
+- ✅ **Código de negocio fuera de `public/`**: nada de “controladores sueltos” en la carpeta pública.
+- ✅ **PSR-4 / Autoload con Composer**: namespaces bajo `Src\` mapeados a `src/`.
+- ✅ **Inyección de dependencias centralizada** en `src/bootstrap.php`: ahí se “arma” la app y se deciden las implementaciones reales.
+- ✅ **Repositorios desacoplados**: el dominio define interfaces; Infra las implementa.
+- ✅ **EventBus en memoria**: cuando pasa algo (crear álbum, héroe…), se publica un evento → limpio, extensible.
+- ✅ **Tests con PHPUnit**: `vendor/bin/phpunit --testdox`.
+- ✅ **Análisis estático con PHPStan**: para mantener calidad.
+- ✅ **Tasks de VS Code**: para automatizar servidor, tests, push, etc.
 
-- ✅ **Controladores fuera de `public/`**  
-  Los controladores viven en `src/Controllers`, no en la carpeta pública. Esto es clave para Clean.
-
-- ✅ **PSR-4 / Autoload**  
-  En `composer.json` se usa el namespace `Src\` → `src/`, lo que permite agregar módulos sin `require_once` manuales.
-
-- ✅ **Inyección de dependencias centralizada**  
-  `src/bootstrap.php` prepara los casos de uso y las implementaciones reales. Así los controladores solo los reciben.
-
-- ✅ **Eventos desacoplados**  
-  Cuando se crea o actualiza algo, se publica un evento en un **EventBus en memoria**, y los handlers lo escuchan (por ejemplo, para notificaciones).
-
-- ✅ **Tests automatizados con PHPUnit**  
-  Hay tests de dominio, de aplicación y de infraestructura. El objetivo es que `vendor/bin/phpunit --testdox` esté SIEMPRE en verde.
-
-- ✅ **Análisis estático con PHPStan**  
-  Se ejecuta desde VS Code con task dedicado y se está normalizando el uso de constantes definidas en runtime.
-
-- ✅ **Tareas de desarrollo automatizadas**  
-  `.vscode/tasks.json` permite levantar el servidor, correr tests, analizar con PHPStan y subir a Git en 1 clic.
+Esto demuestra que no es solo “un PHP con carpetas”, sino un **ejercicio de arquitectura**.
 
 ---
 
@@ -76,25 +65,113 @@ clean-marvel/
 ├── public/
 │   ├── assets/             # CSS, JS, UI
 │   ├── uploads/            # Portadas de álbumes
-│   └── index.php           # Front controller
+│   └── index.php           # Front controller (única entrada)
 │
 ├── src/
-│   ├── bootstrap.php       # Inyección de dependencias
-│   ├── Controllers/        # Presentation layer (HTTP)
-│   ├── Albums/             # Módulo Álbumes (Domain, App, Infra)
-│   ├── Heroes/             # Módulo Héroes
+│   ├── bootstrap.php       # Inyección de dependencias (contendor casero)
+│   ├── Controllers/        # Controladores HTTP
+│   ├── Albums/             # Módulo de Álbumes (Domain + Application + Infra del módulo)
+│   ├── Heroes/             # Módulo de Héroes
 │   ├── Notifications/      # Módulo de notificaciones/eventos
 │   └── Shared/             # Router, EventBus, helpers compartidos
 │
-├── storage/                # Persistencia JSON para MVP
+├── storage/                # Persistencia JSON (MVP, se puede cambiar por DB)
 ├── tests/                  # PHPUnit
-├── composer.json
-└── phpunit.xml.dist
+├── composer.json           # Dependencias y autoload PSR-4
+├── phpunit.xml.dist
+└── .env.example            # Ejemplo de variables de entorno (NO se sube el real)
 ```
 
 ---
 
-## 4. Endpoints principales
+## 4. Requisitos
+
+- PHP **8.2** o superior  
+- **Composer** instalado  
+- Extensiones PHP típicas (`json`, `mbstring`, `pdo` si vas a usar DB)  
+- (Opcional) VS Code con tasks  
+- (Opcional) Servidor embebido de PHP
+
+---
+
+## 5. Instalación rápida
+
+```bash
+# 1. Clonar
+git clone https://github.com/tu-usuario/clean-marvel.git
+cd clean-marvel
+
+# 2. Instalar dependencias (esto crea vendor/)
+composer install
+
+# 3. Crear el archivo .env a partir del ejemplo
+cp .env.example .env
+
+# 4. Levantar el servidor
+php -S localhost:8080 -t public
+
+# 5. Abrir en el navegador
+http://localhost:8080/
+```
+
+👉 **IMPORTANTE**  
+- La carpeta **`vendor/` NO se sube a Git** (se regenera con `composer install`).  
+- El archivo **`.env` TAMPOCO se sube a Git** (contiene datos sensibles).
+
+---
+
+## 6. Por qué `vendor/` no se sube
+
+`vendor/` contiene todas las dependencias externas instaladas con Composer.  
+Subirla haría el repositorio innecesariamente pesado.  
+Por buenas prácticas, solo se versionan:
+
+- `composer.json` → lista de dependencias.  
+- `composer.lock` → versiones exactas instaladas.
+
+Ejecutando `composer install` en cualquier entorno se regenerará `vendor/` igual que en el original.
+
+```bash
+> 💡 Nota: la carpeta `vendor/` está en .gitignore y NO se sube al repositorio.
+```
+
+---
+
+## 7. Archivo `.env`: configuración y API keys
+
+El archivo `.env` guarda configuraciones privadas como claves API, tokens o credenciales.  
+Por seguridad **nunca debe subirse** al repositorio.
+
+### 🧩 Ejemplo de `.env.example`
+
+```env
+APP_ENV=local
+APP_DEBUG=true
+
+# Puertos / rutas
+APP_URL=http://localhost:8080
+
+# OpenAI / IA / servicios externos
+OPENAI_API_KEY=pon-aqui-tu-api-key
+OPENAI_MODEL=gpt-4o-mini
+
+# Storage
+STORAGE_DRIVER=json
+STORAGE_PATH=storage
+```
+
+### 📌 Cómo usarlo
+
+1. Copiá el archivo de ejemplo:
+   ```bash
+   cp .env.example .env
+   ```
+2. Reemplazá los valores por tus claves reales.
+3. Asegurate de que `.env` está incluido en `.gitignore` para no subirlo nunca.
+
+---
+
+## 8. Endpoints principales
 
 | Método | Endpoint                      | Descripción                                     |
 |--------|-------------------------------|-------------------------------------------------|
@@ -109,128 +186,26 @@ clean-marvel/
 
 ---
 
-## 5. Automatización y Tasks de VS Code
+## 9. Tasks de VS Code
 
-Para no escribir siempre los mismos comandos, el proyecto tiene tareas definidas en `.vscode/tasks.json`.
-
-### 🚀 Servidor de desarrollo
-```bash
-php -S localhost:8080 -t public
-```
-
-### 🧪 Tests
-```bash
-vendor/bin/phpunit --colors=always --testdox
-```
-
-### 🔍 PHPStan
-```bash
-vendor/bin/phpstan analyse --memory-limit=512M
-```
-
-### ⚙️ Composer validate
-```bash
-composer validate
-```
-
-### 🧪 QA completo (secuencia)
-Ejecuta PHPUnit → PHPStan → Composer validate en un solo click desde VS Code.
-
-### ⬆️ Git: add + commit + push
-Task que ya tenés armado para:
-1. copiar el README del proyecto al root  
-2. hacer `git add -A`  
-3. hacer `git commit -m "update clean-marvel + sync README root"`  
-4. hacer `git push`
-
-Esto queda documentado para que otro dev sepa que **no es un push manual**, sino un task estandarizado.
+- **Levantar server**: `php -S localhost:8080 -t public`  
+- **Tests**: `vendor/bin/phpunit --testdox`  
+- **PHPStan**: `vendor/bin/phpstan analyse --memory-limit=512M`  
+- **Push estándar**: copia README → commit → push automático.
 
 ---
 
-## 6. Próximamente / Roadmap técnico
+## 10. Roadmap técnico
 
-- 🔜 **Router dedicado en `src/Shared/Http/Router.php`**  
-  Para sacar definitivamente el `switch` de `public/index.php` y dejarlo mínimo.
-
-- 🔜 **Microservicio PHP para OpenAI**  
-  Extraer la llamada a OpenAI (cómics IA) en un endpoint propio, desacoplado de la app principal.
-
-- 🔜 **Microservicio / módulo RAG**  
-  Repositorio vectorial + recuperación de héroes / álbumes para generar contenido contextual con IA.
-
-- 🔜 **Login / autenticación básica**  
-  Para no exponer los endpoints de administración (seed, tests) en producción.
-
-- 🔜 **Migración de JSON → SQLite/MySQL**  
-  Manteniendo los mismos repositorios pero con otra implementación en Infraestructura.
-
-- 🔜 **CI local con VS Code Tasks**  
-  Que el task “QA completo” sea obligatorio antes de subir.
-
----
-
-## 7. Ejecución en local
-
-```bash
-composer install
-composer dump-autoload
-php -S localhost:8080 -t public
-# abrir http://localhost:8080/
-```
-
----
-
-## 8. Dependencias y carpeta `vendor/`
-
-Este proyecto utiliza **Composer** para gestionar dependencias.  
-Por buenas prácticas, la carpeta `vendor/` **no se incluye en el repositorio** porque contiene cientos de archivos externos que se pueden reinstalar fácilmente con Composer.
-
-Solo los archivos `composer.json` y `composer.lock` se versionan para garantizar que todos los desarrolladores instalen exactamente las mismas librerías.
-
-### 🧩 Instrucciones
-
-Después de clonar el repositorio, ejecutá:
-
-```bash
-composer install
-```
-
-Este comando:
-- Descargará automáticamente todas las dependencias declaradas en `composer.json`.
-- Creará la carpeta `vendor/` en tu entorno local.
-- Generará el autoload PSR-4 necesario para ejecutar la app.
-
-> ⚠️ Si intentás ejecutar el proyecto sin la carpeta `vendor/`, obtendrás errores de clase no encontrada (`Class not found`) o autoload fallido.  
-> Simplemente corré `composer install` para resolverlo.
-
----
-
-## 9. Archivo `.env` y claves API
-
-El archivo `.env` se utiliza para **guardar configuraciones sensibles** (como claves API, tokens o credenciales).  
-Por motivos de seguridad, **no debe subirse al repositorio**.
-
-### 🔒 Ejemplo de `.env`
-
-```bash
-# Configuración del entorno
-APP_ENV=local
-APP_DEBUG=true
-
-# Clave API de OpenAI (ejemplo)
-OPENAI_API_KEY=sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-```
-
-### 🧭 Cómo usarlo
-1. Copiá el ejemplo de `.env` a un nuevo archivo:
-   ```bash
-   cp .env.example .env
-   ```
-2. Reemplazá los valores por tus claves reales.  
-3. Asegurate de que `.env` está incluido en `.gitignore` para no subirlo nunca al repositorio.
+- Router 100% desacoplado (`src/Shared/Http/Router.php`)
+- Sustitución de JSON por **SQLite**
+- Microservicio PHP para **OpenAI**
+- Autenticación básica (proteger endpoints)
+- CI local con tasks obligatorios
 
 ---
 
 ## Autor
 
-**Luis Martín Pallante & Alfred – asistente copiloto IA**
+**Luis Martín Pallante**  
+con la ayuda de **Alfred – asistente copiloto IA**
