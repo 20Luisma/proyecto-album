@@ -1,128 +1,185 @@
 # Clean Marvel Album – Arquitectura Clean en PHP 8.2
 
-**Clean Marvel Album** es una aplicación web desarrollada en **PHP 8.2** que implementa los principios de **Arquitectura Limpia (Clean Architecture)** y **Diseño Guiado por el Dominio (DDD)**.  
-El sistema permite gestionar álbumes de cromos de Marvel y añadir héroes a ellos, sirviendo como un proyecto de referencia para construir software mantenible, escalable y desacoplado.
+**Clean Marvel Album** es una aplicación web desarrollada en **PHP 8.2** que implementa los principios de **Arquitectura Limpia (Clean Architecture)**, **DDD ligero** y **buenas prácticas de desacoplamiento**.  
+Su objetivo no es solo gestionar álbumes y héroes de Marvel, sino servir como **proyecto de referencia** para aplicar una arquitectura clara, módulos aislados y pruebas automatizadas en PHP moderno.
 
 ---
 
-## Arquitectura
+## 1. Arquitectura Clean aplicada
 
-El proyecto sigue una estricta separación de capas, garantizando que la lógica de negocio (dominio) sea independiente de la infraestructura y la presentación.
+La app está organizada en capas claramente separadas, de fuera hacia dentro:
 
-```
-┌──────────────────┐
-│  Presentation     │ (index.php, Controllers, views/*.php)
-└────────┬──────────┘
-         │
-┌────────▼────────┐
-│  Application     │ (Use Cases, DTOs, Services)
-└────────┬────────┘
-         │
-┌────────▼────────┐
-│  Domain          │ (Entities, Repositories, Events)
-└────────┬────────┘
-         │
-┌────────▼────────┐
-│  Infrastructure  │ (Persistence, EventBus Impl.)
-└──────────────────┘
+```text
+Presentation (public/, src/Controllers)  →  Application (UseCases)  →  Domain (Entities, Repos)  →  Infrastructure (JSON, EventBus)
 ```
 
-### Componentes Clave
+- **Capa de Presentación**  
+  - `public/index.php` actúa como **Front Controller**.  
+  - `src/Controllers/*` contiene los **controladores HTTP** que orquestan la request (no contienen lógica de negocio).  
+  - `PageController` atiende las rutas HTML visibles en navegador.
+  - El enrutado se está moviendo progresivamente a un **Router dedicado** (`src/Shared/Http/Router.php`) para que `index.php` quede muy delgado.
 
-- **Capas (Domain, Application, Infrastructure)**: Cada módulo (`Albums`, `Heroes`, `Notifications`) está organizado internamente siguiendo esta estructura.
-- **EventBus In-Memory**: Un bus de eventos síncrono (`InMemoryEventBus`) desacopla la lógica de negocio de los efectos secundarios.
-- **Persistencia en JSON (MVP)**: Implementación simple que puede migrarse fácilmente a **SQLite** o **MySQL**.
-- **Inyección de Dependencias**: El archivo `bootstrap.php` centraliza el “cableado” de dependencias.
-- **Autoload PSR-4**: Configurado en `composer.json` para el namespace `Src\`, lo que permite cargar automáticamente clases dentro de `src/`.
+- **Capa de Aplicación**  
+  - Contiene los **casos de uso (Use Cases)**: crear álbum, listar, actualizar portada, crear héroe, borrar héroe, limpiar notificaciones, etc.  
+  - Aquí vive la **orquestación** de dominio, no la lógica de presentación.  
+  - Publica eventos de dominio cuando algo relevante ocurre (por ejemplo, “álbum actualizado”).
+
+- **Capa de Dominio**  
+  - Entidades ricas (`Album`, `Hero`) con sus invariantes.  
+  - Interfaces de repositorio (pueden tener implementación en JSON hoy y en SQLite mañana).  
+  - **Eventos de dominio** que luego escucha la capa superior de notificaciones.
+
+- **Capa de Infraestructura**  
+  - Repositorios que leen/escriben en JSON (`storage/*.json`).  
+  - `InMemoryEventBus` para no acoplar el dominio a la infraestructura.  
+  - Aquí es donde en el futuro se enchufará SQLite/MySQL sin tocar la capa de dominio.
+
+Esta separación permite:
+1. **Probar el dominio sin servidor web.**
+2. **Cambiar la persistencia sin tocar el dominio.**
+3. **Exponer la misma lógica vía API, CLI o Web sin duplicar código.**
 
 ---
 
-## Estructura de Carpetas
+## 2. Buenas prácticas que ya implementa
 
-```
+- ✅ **Front Controller único** en `public/index.php`  
+  No hay “PHP suelto” en el root: todo entra por `public/`.
+
+- ✅ **Controladores fuera de `public/`**  
+  Los controladores viven en `src/Controllers`, no en la carpeta pública. Esto es clave para Clean.
+
+- ✅ **PSR-4 / Autoload**  
+  En `composer.json` se usa el namespace `Src\` → `src/`, lo que permite agregar módulos sin `require_once` manuales.
+
+- ✅ **Inyección de dependencias centralizada**  
+  `src/bootstrap.php` prepara los casos de uso y las implementaciones reales. Así los controladores solo los reciben.
+
+- ✅ **Eventos desacoplados**  
+  Cuando se crea o actualiza algo, se publica un evento en un **EventBus en memoria**, y los handlers lo escuchan (por ejemplo, para notificaciones).
+
+- ✅ **Tests automatizados con PHPUnit**  
+  Hay tests de dominio, de aplicación y de infraestructura. El objetivo es que `vendor/bin/phpunit --testdox` esté SIEMPRE en verde.
+
+- ✅ **Análisis estático con PHPStan**  
+  Se ejecuta desde VS Code con task dedicado y se está normalizando el uso de constantes definidas en runtime.
+
+- ✅ **Tareas de desarrollo automatizadas**  
+  `.vscode/tasks.json` permite levantar el servidor, correr tests, analizar con PHPStan y subir a Git en 1 clic.
+
+---
+
+## 3. Estructura de carpetas
+
+```text
 clean-marvel/
 ├── public/
-│   ├── assets/             # CSS y JS modular (UI)
-│   ├── uploads/            # Archivos subidos
-│   └── index.php           # Punto de entrada (router principal)
+│   ├── assets/             # CSS, JS, UI
+│   ├── uploads/            # Portadas de álbumes
+│   └── index.php           # Front controller
 │
 ├── src/
 │   ├── bootstrap.php       # Inyección de dependencias
-│   ├── Controllers/        # Controladores HTTP (Presentation Layer)
-│   │   ├── AlbumController.php
-│   │   ├── HeroController.php
-│   │   └── ComicController.php
-│   ├── Albums/             # Módulo de Álbumes (Domain, App, Infra)
-│   ├── Heroes/             # Módulo de Héroes (Domain, App, Infra)
-│   ├── Notifications/      # Módulo de Notificaciones
-│   └── Shared/             # Componentes compartidos (EventBus, Router, etc.)
+│   ├── Controllers/        # Presentation layer (HTTP)
+│   ├── Albums/             # Módulo Álbumes (Domain, App, Infra)
+│   ├── Heroes/             # Módulo Héroes
+│   ├── Notifications/      # Módulo de notificaciones/eventos
+│   └── Shared/             # Router, EventBus, helpers compartidos
 │
-├── storage/
-│   ├── albums.json         # Base de datos de álbumes
-│   ├── heroes.json         # Base de datos de héroes
-│   └── notifications.log   # Log de notificaciones
-│
-├── tests/                  # PHPUnit tests
-│   └── ...
-│
-├── composer.json           # Dependencias y autoload PSR-4
-└── phpunit.xml.dist        # Configuración de PHPUnit
+├── storage/                # Persistencia JSON para MVP
+├── tests/                  # PHPUnit
+├── composer.json
+└── phpunit.xml.dist
 ```
 
 ---
 
-## 🧰 Automatización y Tasks de VS Code
+## 4. Endpoints principales
 
-El proyecto incluye un archivo `.vscode/tasks.json` con tareas automatizadas que facilitan desarrollo, pruebas y despliegue.
+| Método | Endpoint                      | Descripción                                     |
+|--------|-------------------------------|-------------------------------------------------|
+| `GET`  | `/albums`                     | Lista todos los álbumes creados.                |
+| `POST` | `/albums`                     | Crea un nuevo álbum.                            |
+| `DELETE`| `/albums/{albumId}`          | Elimina un álbum y sus héroes asociados.        |
+| `GET`  | `/albums/{albumId}/heroes`    | Lista los héroes de un álbum específico.        |
+| `POST` | `/albums/{albumId}/heroes`    | Añade un nuevo héroe a un álbum.                |
+| `DELETE`| `/heroes/{heroId}`           | Elimina un héroe específico.                    |
+| `GET`  | `/notifications`              | Obtiene el log de notificaciones.               |
+| `POST` | `/comics/generate`            | Genera un cómic con IA basado en héroes.        |
+
+---
+
+## 5. Automatización y Tasks de VS Code
+
+Para no escribir siempre los mismos comandos, el proyecto tiene tareas definidas en `.vscode/tasks.json`.
 
 ### 🚀 Servidor de desarrollo
-Inicia el servidor PHP embebido:
 ```bash
 php -S localhost:8080 -t public
 ```
 
-### 🧪 Ejecución de tests PHPUnit
-Corre toda la suite con colores y formato TestDox:
+### 🧪 Tests
 ```bash
 vendor/bin/phpunit --colors=always --testdox
 ```
 
-### 🔍 Análisis estático con PHPStan
-Evalúa errores de tipo y buenas prácticas:
+### 🔍 PHPStan
 ```bash
 vendor/bin/phpstan analyse --memory-limit=512M
 ```
 
-### ⚙️ Validar composer.json
-Verifica la configuración de dependencias:
+### ⚙️ Composer validate
 ```bash
 composer validate
 ```
 
-### 🧪 QA completo (tests + phpstan + composer)
-Ejecuta las tres tareas anteriores en secuencia automática:
-1. PHPUnit  
-2. PHPStan  
-3. Composer validate  
+### 🧪 QA completo (secuencia)
+Ejecuta PHPUnit → PHPStan → Composer validate en un solo click desde VS Code.
 
-Todo desde:
+### ⬆️ Git: add + commit + push
+Task que ya tenés armado para:
+1. copiar el README del proyecto al root
+2. hacer `git add -A`
+3. hacer `git commit -m "update clean-marvel + sync README root"`
+4. hacer `git push`
+
+Esto queda documentado para que otro dev sepa que **no es un push manual**, sino un task estandarizado.
+
+---
+
+## 6. Próximamente / Roadmap técnico
+
+- 🔜 **Router dedicado en `src/Shared/Http/Router.php`**  
+  Para sacar definitivamente el `switch` de `public/index.php` y dejarlo mínimo.
+
+- 🔜 **Microservicio PHP para OpenAI**  
+  Extraer la llamada a OpenAI (cómics IA) en un endpoint propio, desacoplado de la app principal.
+
+- 🔜 **Microservicio / módulo RAG**  
+  Repositorio vectorial + recuperación de héroes / álbumes para generar contenido contextual con IA.
+
+- 🔜 **Login / autenticación básica**  
+  Para no exponer los endpoints de administración (seed, tests) en producción.
+
+- 🔜 **Migración de JSON → SQLite/MySQL**  
+  Manteniendo los mismos repositorios pero con otra implementación en Infraestructura.
+
+- 🔜 **CI local con VS Code Tasks**  
+  Que el task “QA completo” sea obligatorio antes de subir.
+
+---
+
+## 7. Ejecución en local
+
 ```bash
-⇧⌘P → Run Task → “🧪 QA completo (tests + phpstan + composer)”
+composer install
+composer dump-autoload
+php -S localhost:8080 -t public
+# abrir http://localhost:8080/
 ```
-
-### ⬆️ Git: add + commit + push (actualiza ambos README)
-Ejecuta una subida automatizada, sincronizando el README de `clean-marvel` con el README raíz y sube cambios al repositorio.
-
-### 🧹 Git: limpiar archivos eliminados
-Detecta y elimina del repositorio cualquier archivo borrado localmente:
-```bash
-git add -u && git commit -m "remove deleted files" && git push
-```
-
-Estas tareas permiten desarrollar, probar y subir código a GitHub sin salir de VS Code, manteniendo la coherencia entre el proyecto local y el repositorio remoto.
 
 ---
 
 ## Autor
 
-**Luis Martín Palllante & Alfred – Asistente copiloto IA**
+**Luis Martín Palllante & Alfred – asistente copiloto IA**
