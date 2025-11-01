@@ -133,6 +133,25 @@
         "reveal": "always",
         "panel": "shared"
       }
+    },
+    {
+      "label": "Run OpenAI Service (8081)",
+      "type": "shell",
+      "command": "php -S localhost:8081 -t openai-service/public",
+      "isBackground": true,
+      "problemMatcher": []
+    },
+    {
+      "label": "Run Both (8080 + 8081)",
+      "dependsOn": [
+        "🚀 Iniciar servidor PHP",
+        "Run OpenAI Service (8081)"
+      ],
+      "dependsOrder": "parallel",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      }
     }
   ]
 }
