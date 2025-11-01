@@ -36,33 +36,52 @@ require __DIR__ . '/header.php';
       <div class="flex flex-col lg:flex-row lg:items-start gap-8">
         <!-- ASIDE: Crear cómic + actividad -->
         <aside class="lg:w-1/3 space-y-6">
-        <section class="card section-lined rounded-2xl p-6 shadow-xl space-y-6">
-          <div class="space-y-2">
-            <h2 class="text-3xl text-white">Crear tu cómic</h2>
-            <p class="text-sm text-gray-300/80">Selecciona tus héroes favoritos, deja que la IA construya la historia y revisa el resultado al instante.</p>
+        <section id="comic-creation-card" class="card section-lined rounded-2xl p-6 shadow-xl space-y-5 relative overflow-hidden">
+          <div id="comic-creation-content" class="space-y-5">
+            <div class="space-y-2">
+              <h2 class="text-3xl text-white">Crear tu cómic</h2>
+              <p class="text-sm text-gray-300/80">Selecciona tus héroes favoritos, deja que la IA construya la historia y revisa el resultado al instante.</p>
+            </div>
+
+            <form id="comic-form" class="space-y-4">
+              <input type="hidden" id="selected-heroes-input" name="heroIds" value="[]">
+
+              <div class="rounded-xl border border-slate-700/70 bg-slate-900/65 px-4 py-4 space-y-3">
+                <div class="flex items-center justify-between gap-3">
+                  <p class="text-xs uppercase tracking-[0.28em] text-gray-400">Héroes seleccionados</p>
+                  <span id="selected-heroes-count" class="text-xs font-semibold text-amber-300/80">0</span>
+                </div>
+                <p id="selected-heroes-empty" class="text-sm text-gray-400 bg-slate-900/40 border border-dashed border-slate-700 rounded-xl px-4 py-3 text-center">Aún no seleccionas héroes.</p>
+                <div id="selected-heroes-list" class="flex flex-wrap gap-2"></div>
+              </div>
+
+              <div class="rounded-xl border border-slate-700/70 bg-slate-900/65 px-4 py-4">
+                <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+                  <button type="submit" id="comic-generate" class="btn btn-primary w-full sm:w-auto">
+                    <span>Generar cómic</span>
+                  </button>
+                  <button type="button" id="comic-cancel" class="btn btn-secondary w-full sm:w-auto">Cancelar</button>
+                </div>
+              </div>
+
+              <p id="comic-message" class="text-sm hidden msg-hidden"></p>
+            </form>
           </div>
 
-          <form id="comic-form" class="space-y-6">
-            <input type="hidden" id="selected-heroes-input" name="heroIds" value="[]">
-
-            <div class="space-y-3">
-              <div class="flex items-center justify-between gap-3">
-                <p class="text-xs uppercase tracking-[0.28em] text-gray-400">Héroes seleccionados</p>
-                <span id="selected-heroes-count" class="text-xs font-semibold text-amber-300/80">0</span>
-              </div>
-              <p id="selected-heroes-empty" class="text-sm text-gray-400 bg-slate-900/60 border border-dashed border-slate-700 rounded-xl px-4 py-3 text-center">Aún no seleccionas héroes.</p>
-              <div id="selected-heroes-list" class="flex flex-wrap gap-2"></div>
+          <div id="microservice-comm-panel" class="msc-panel msc-hidden">
+            <div class="msc-header">
+              <span class="msc-title">Canal 8080 ↔ 8081</span>
+              <span class="msc-badge">microservicio</span>
             </div>
-
-            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end pt-2">
-              <button type="submit" id="comic-generate" class="btn btn-primary w-full sm:w-auto">
-                <span>Generar cómic</span>
-              </button>
-              <button type="button" id="comic-cancel" class="btn btn-secondary w-full sm:w-auto">Cancelar</button>
-            </div>
-
-            <p id="comic-message" class="text-sm hidden msg-hidden"></p>
-          </form>
+            <p class="msc-subtitle">Sincronizando con el generador de cómics…</p>
+            <ul class="msc-steps">
+              <li class="msc-step" data-step="send">▶ Enviando datos…</li>
+              <li class="msc-step" data-step="process">⚙ Procesando en 8081…</li>
+              <li class="msc-step" data-step="return">⬅ Devolviendo al 8080…</li>
+            </ul>
+            <p id="msc-status-text" class="msc-status"></p>
+            <button id="msc-retry" class="msc-retry msc-hidden" type="button">Reintentar</button>
+          </div>
         </section>
         <section class="card section-lined rounded-2xl p-6 shadow-xl space-y-4">
           <div class="flex flex-wrap items-center justify-between gap-3">
@@ -97,7 +116,6 @@ require __DIR__ . '/header.php';
           <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div class="space-y-1">
               <h2 class="text-3xl text-white">Héroes disponibles</h2>
-              <p class="text-sm text-gray-300/80 max-w-xl">Marca tus héroes favoritos para construir la historia perfecta. Puedes combinar héroes de distintos álbumes.</p>
             </div>
             <div class="flex flex-col sm:flex-row sm:items-center gap-3">
               <label class="flex items-center gap-3 bg-slate-800/60 border border-slate-700 rounded-lg px-3 py-2 shadow-inner">
@@ -111,19 +129,6 @@ require __DIR__ . '/header.php';
           <div id="comic-heroes-grid" class="grid gap-5 sm:grid-cols-2 xl:grid-cols-3"></div>
           <p id="comic-heroes-empty" class="hidden text-sm text-gray-400 italic text-center py-10">No encontramos héroes que coincidan con tu búsqueda.</p>
         </section>
-
-        <div id="microservice-comm-panel" class="msc-panel msc-hidden">
-          <div class="msc-title">Canal seguro 8080 ↔ 8081 · Modo Superhéroe</div>
-          <div class="msc-subtitle">Transmisión de órdenes al microservicio de IA</div>
-          <ul class="msc-steps">
-            <li class="msc-step" data-step="send">▶ Enviando datos desde 8080 → 8081…</li>
-            <li class="msc-step" data-step="process">⚙ Procesando en 8081…</li>
-            <li class="msc-step" data-step="return">⬅ Devolviendo respuesta a 8080…</li>
-          </ul>
-          <div class="msc-status" id="msc-status-text"></div>
-          <button id="msc-retry" class="msc-retry msc-hidden" type="button">Reintentar transmisión</button>
-          <div class="msc-glow"></div>
-        </div>
 
         <section id="comic-slideshow-section" class="hidden relative card section-lined rounded-2xl p-6 shadow-xl space-y-4">
             <button id="close-comic-result" type="button" class="absolute top-4 right-4 text-gray-400 hover:text-white z-20">

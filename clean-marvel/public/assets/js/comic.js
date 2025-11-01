@@ -1,5 +1,4 @@
 import { formatDateTime, showMessage } from '/assets/js/main.js';
-import { MSC } from '/assets/js/microservice-communication.js';
 
 const heroGrid = document.getElementById('comic-heroes-grid');
 const heroSearchInput = document.getElementById('comic-hero-search');
@@ -38,10 +37,6 @@ const activityTitle = document.getElementById('comic-activity-title');
 const activityPrevButton = document.getElementById('comic-activity-prev');
 const activityNextButton = document.getElementById('comic-activity-next');
 const activityClearButton = document.getElementById('comic-activity-clear');
-
-const communicationPanel = document.getElementById('microservice-comm-panel');
-const communicationStatus = document.getElementById('msc-status-text');
-const communicationRetryButton = document.getElementById('msc-retry');
 
 const heroState = {
   all: [],
@@ -92,35 +87,9 @@ function setGeneratingState(isGenerating) {
 }
 
 function hideCommunicationPanel() {
-  if (communicationPanel) {
-    communicationPanel.classList.add('msc-hidden');
+  if (window.MSC && typeof window.MSC.hidePanel === 'function') {
+    window.MSC.hidePanel();
   }
-  if (communicationStatus) {
-    communicationStatus.className = 'msc-status';
-    communicationStatus.textContent = '';
-  }
-  if (communicationRetryButton) {
-    communicationRetryButton.classList.add('msc-hidden');
-  }
-}
-
-/* 🔵 1) CLICK DEL BOTÓN: mostrar HUD YA */
-if (comicGenerateButton) {
-  comicGenerateButton.addEventListener('click', () => {
-    if (isGeneratingComic) return;
-    if (typeof MSC !== 'undefined' && typeof MSC.showPanel === 'function') {
-      MSC.showPanel();
-      if (typeof MSC.setStep === 'function') {
-        MSC.setStep('send'); // primer paso visible
-      }
-      // opcional: pasamos a process un pelín después para que se note
-      setTimeout(() => {
-        if (typeof MSC.setStep === 'function') {
-          MSC.setStep('process');
-        }
-      }, 200);
-    }
-  });
 }
 
 function clearGeneratedComic() {
@@ -528,31 +497,16 @@ comicForm.addEventListener('submit', async (event) => {
   const selectedHeroes = Array.from(heroState.selected.values());
   if (selectedHeroes.length === 0) {
     showMessage(comicMessage, 'Selecciona al menos un héroe antes de generar el cómic.', true);
-    hideCommunicationPanel();
+    if (window.MSC) {
+      window.MSC.markError('Debes elegir héroes.');
+    }
     return;
   }
 
-  // Aseguramos que las secciones donde vive el HUD sean visibles antes de mostrarlo
-  if (comicStorySection) {
-    comicStorySection.classList.remove('hidden');
-  }
-  if (comicSlideshowSection) {
-    comicSlideshowSection.classList.remove('hidden');
-  }
-
-  // forzamos HUD por si el click no se disparó
-  if (typeof MSC !== 'undefined') {
-    if (typeof MSC.showPanel === 'function') {
-      MSC.showPanel();
-    }
-    if (typeof MSC.setStep === 'function') {
-      MSC.setStep('send');
-      setTimeout(() => {
-        if (typeof MSC.setStep === 'function') {
-          MSC.setStep('process');
-        }
-      }, 200);
-    }
+  // mostrar HUD desde el inicio
+  if (window.MSC) {
+    window.MSC.showPanel();
+    window.MSC.setStep('process');
   }
 
   setGeneratingState(true);
@@ -578,15 +532,9 @@ comicForm.addEventListener('submit', async (event) => {
     }
 
     /* 🔵 3) AQUÍ metemos el delay para que se vean los pasos */
-    if (typeof MSC !== 'undefined') {
-      if (typeof MSC.setStep === 'function') {
-        MSC.setStep('return'); // ya volvió del 8081
-      }
-      setTimeout(() => {
-        if (typeof MSC.markSuccess === 'function') {
-          MSC.markSuccess();
-        }
-      }, 550); // medio segundo para que el ojo lo vea
+    if (window.MSC) {
+      window.MSC.setStep('return');
+      setTimeout(() => window.MSC && window.MSC.markSuccess(), 350);
     }
 
     renderGeneratedComic(payload.datos);
@@ -602,8 +550,9 @@ comicForm.addEventListener('submit', async (event) => {
     showMessage(comicMessage, '¡Cómic generado con éxito!');
   } catch (error) {
     console.error(error);
-    if (typeof MSC !== 'undefined' && typeof MSC.markError === 'function') {
-      MSC.markError();
+    if (window.MSC) {
+      const errorMessage = error instanceof Error ? error.message : undefined;
+      window.MSC.markError(errorMessage);
     }
     showMessage(comicMessage, error instanceof Error ? error.message : 'No se pudo generar el cómic.', true);
   } finally {

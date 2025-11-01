@@ -1,96 +1,84 @@
-// Microservice Communication HUD (modo superhéroe) - versión corregida
 const MSC = (function() {
+  function getPanel() { return document.getElementById('microservice-comm-panel'); }
+  function getSteps() {
+    const p = getPanel();
+    return p ? p.querySelectorAll('.msc-step') : [];
+  }
+  function getStatus() { return document.getElementById('msc-status-text'); }
+  function getRetry() { return document.getElementById('msc-retry'); }
+  function getHostCard() { return document.getElementById('comic-creation-card'); }
 
-  // buscamos SIEMPRE los elementos en el momento
-  function getPanel() {
-    return document.getElementById('microservice-comm-panel');
-  }
-  function getSteps(panel) {
-    return panel ? panel.querySelectorAll('.msc-step') : [];
-  }
-  function getStatus() {
-    return document.getElementById('msc-status-text');
-  }
-  function getRetryBtn() {
-    return document.getElementById('msc-retry');
-  }
-
-  // mostrar HUD inmediatamente
   function showPanel() {
-    const panel = getPanel();
-    if (!panel) return;
-    panel.classList.remove('msc-hidden');
+    const p = getPanel();
+    if (!p) return;
+    p.classList.remove('msc-hidden');
+    const host = getHostCard();
+    if (host) host.classList.add('msc-active');
     clearStatus();
     setStep('send');
   }
 
-  // activar paso
+  function hidePanel() {
+    const p = getPanel();
+    if (!p) return;
+    p.classList.add('msc-hidden');
+    const host = getHostCard();
+    if (host) host.classList.remove('msc-active');
+  }
+
   function setStep(stepName) {
-    const panel = getPanel();
-    const steps = getSteps(panel);
-    steps.forEach(step => {
-      const active = step.dataset.step === stepName;
-      step.classList.toggle('msc-active', active);
+    getSteps().forEach(step => {
+      step.classList.toggle('msc-active', step.dataset.step === stepName);
     });
   }
 
-  // éxito
   function markSuccess(msg) {
     setStep('return');
-    const status = getStatus();
-    if (status) {
-      status.className = 'msc-status msc-success';
-      status.textContent = msg || '✅ Comunicación correcta. Microservicio funcionando (8080 ↔ 8081).';
+    const s = getStatus();
+    if (s) {
+      s.className = 'msc-status msc-success';
+      s.textContent = msg || '✅ Comunicación correcta. Microservicio funcionando.';
     }
-    const panel = getPanel();
-    setTimeout(() => {
-      if (panel) panel.classList.add('msc-hidden');
-    }, 3500);
+    setTimeout(hidePanel, 1600);
   }
 
-  // error
   function markError(msg) {
-    const status = getStatus();
-    if (status) {
-      status.className = 'msc-status msc-error';
-      status.textContent = msg || '❌ Comunicación fallida. No se obtuvo respuesta del microservicio (8081).';
+    const p = getPanel();
+    if (p) p.classList.remove('msc-hidden');
+    const host = getHostCard();
+    if (host) host.classList.add('msc-active');
+    const s = getStatus();
+    if (s) {
+      s.className = 'msc-status msc-error';
+      s.textContent = msg || '❌ Error en la comunicación con el microservicio.';
     }
-    const retryBtn = getRetryBtn();
-    if (retryBtn) retryBtn.classList.remove('msc-hidden');
+    const r = getRetry();
+    if (r) r.classList.remove('msc-hidden');
   }
 
-  // limpiar
   function clearStatus() {
-    const status = getStatus();
-    const retryBtn = getRetryBtn();
-    if (status) {
-      status.className = 'msc-status';
-      status.textContent = '';
+    const s = getStatus();
+    const r = getRetry();
+    if (s) {
+      s.className = 'msc-status';
+      s.textContent = '';
     }
-    if (retryBtn) retryBtn.classList.add('msc-hidden');
+    if (r) r.classList.add('msc-hidden');
   }
 
-  // reintentar (visual)
-  document.addEventListener('click', (e) => {
-    const retryBtn = getRetryBtn();
-    if (retryBtn && e.target === retryBtn) {
+  document.addEventListener('click', (ev) => {
+    const r = getRetry();
+    if (r && ev.target === r) {
       clearStatus();
-      showPanel();
+      hidePanel();
     }
   });
 
-  return {
-    showPanel,
-    setStep,
-    markSuccess,
-    markError,
-  };
+  return { showPanel, hidePanel, setStep, markSuccess, markError };
 })();
 
-// disponible global
 if (typeof window !== 'undefined') {
   window.MSC = MSC;
 }
 
-// por si usas módulos
 export { MSC };
