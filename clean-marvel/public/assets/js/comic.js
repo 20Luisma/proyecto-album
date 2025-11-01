@@ -38,6 +38,10 @@ const activityPrevButton = document.getElementById('comic-activity-prev');
 const activityNextButton = document.getElementById('comic-activity-next');
 const activityClearButton = document.getElementById('comic-activity-clear');
 
+const communicationPanel = document.getElementById('microservice-comm-panel');
+const communicationStatus = document.getElementById('msc-status-text');
+const communicationRetryButton = document.getElementById('msc-retry');
+
 const heroState = {
   all: [],
   filtered: [],
@@ -84,6 +88,19 @@ function setGeneratingState(isGenerating) {
   }
 }
 
+function hideCommunicationPanel() {
+  if (communicationPanel) {
+    communicationPanel.classList.add('msc-hidden');
+  }
+  if (communicationStatus) {
+    communicationStatus.className = 'msc-status';
+    communicationStatus.textContent = '';
+  }
+  if (communicationRetryButton) {
+    communicationRetryButton.classList.add('msc-hidden');
+  }
+}
+
 function clearGeneratedComic() {
   if (slideshowInterval) clearInterval(slideshowInterval);
 
@@ -104,6 +121,8 @@ function clearGeneratedComic() {
     comicOutputPanelsEmpty.textContent = 'Las viñetas generadas se mostrarán en este espacio.';
     comicOutputPanelsEmpty.classList.remove('hidden');
   }
+
+  hideCommunicationPanel();
 }
 
 let currentSlide = 0;
@@ -427,6 +446,7 @@ comicCancelButton.addEventListener('click', () => {
   comicForm.reset();
   resetSelections();
   clearGeneratedComic();
+  hideCommunicationPanel();
   showMessage(comicMessage, 'Se limpió la selección y el resultado generado.');
 });
 
@@ -442,6 +462,9 @@ comicForm.addEventListener('submit', async (event) => {
 
   setGeneratingState(true);
   showMessage(comicMessage, 'Generando cómic con IA, esto puede tardar unos segundos...');
+  if (typeof MSC !== 'undefined' && typeof MSC.showPanel === 'function') {
+    MSC.showPanel();
+  }
 
   try {
     const response = await fetch('/comics/generate', {
@@ -451,11 +474,20 @@ comicForm.addEventListener('submit', async (event) => {
     });
 
     const payload = await response.json().catch(() => null);
-    if (!response.ok || payload?.estado !== 'éxito') {
+    const storyText = typeof payload?.datos?.story?.summary === 'string' && payload.datos.story.summary.trim() !== ''
+      ? payload.datos.story.summary
+      : typeof payload?.datos?.story?.title === 'string'
+        ? payload.datos.story.title.trim()
+        : '';
+
+    if (!response.ok || payload?.estado !== 'éxito' || storyText === '') {
       const errorMessage = payload?.message || 'No se pudo generar el cómic con IA.';
       throw new Error(errorMessage);
     }
 
+    if (typeof MSC !== 'undefined' && typeof MSC.markSuccess === 'function') {
+      MSC.markSuccess();
+    }
     renderGeneratedComic(payload.datos);
 
     const storyTitle = payload?.datos?.story?.title || 'tu cómic';
@@ -469,6 +501,9 @@ comicForm.addEventListener('submit', async (event) => {
     showMessage(comicMessage, '¡Cómic generado con éxito!');
   } catch (error) {
     console.error(error);
+    if (typeof MSC !== 'undefined' && typeof MSC.markError === 'function') {
+      MSC.markError();
+    }
     showMessage(comicMessage, error instanceof Error ? error.message : 'No se pudo generar el cómic.', true);
   } finally {
     setGeneratingState(false);

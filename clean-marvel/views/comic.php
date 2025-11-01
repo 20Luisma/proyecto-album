@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 $pageTitle = 'Clean Marvel Album — Create Your Comic';
-$additionalStyles = ['/assets/css/comic.css'];
+$additionalStyles = ['/assets/css/comic.css', '/assets/css/microservice-communication.css'];
 require __DIR__ . '/header.php';
 ?>
 
@@ -112,6 +112,19 @@ require __DIR__ . '/header.php';
           <p id="comic-heroes-empty" class="hidden text-sm text-gray-400 italic text-center py-10">No encontramos héroes que coincidan con tu búsqueda.</p>
         </section>
 
+        <div id="microservice-comm-panel" class="msc-panel msc-hidden">
+          <div class="msc-title">Canal seguro 8080 ↔ 8081 · Modo Superhéroe</div>
+          <div class="msc-subtitle">Transmisión de órdenes al microservicio de IA</div>
+          <ul class="msc-steps">
+            <li class="msc-step" data-step="send">▶ Enviando datos desde 8080 → 8081…</li>
+            <li class="msc-step" data-step="process">⚙ Procesando en 8081…</li>
+            <li class="msc-step" data-step="return">⬅ Devolviendo respuesta a 8080…</li>
+          </ul>
+          <div class="msc-status" id="msc-status-text"></div>
+          <button id="msc-retry" class="msc-retry msc-hidden" type="button">Reintentar transmisión</button>
+          <div class="msc-glow"></div>
+        </div>
+
         <section id="comic-slideshow-section" class="hidden relative card section-lined rounded-2xl p-6 shadow-xl space-y-4">
             <button id="close-comic-result" type="button" class="absolute top-4 right-4 text-gray-400 hover:text-white z-20">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
@@ -148,5 +161,5 @@ require __DIR__ . '/header.php';
   </main>
 
 <?php
-$scripts = ['/assets/js/comic.js'];
+$scripts = ['/assets/js/microservice-communication.js', '/assets/js/comic.js'];
 require __DIR__ . '/footer.php';
