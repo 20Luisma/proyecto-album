@@ -1,248 +1,86 @@
-# Clean Marvel Album + Microservicio OpenAI
+# 🧠 Clean Marvel Album — Arquitectura Clean + Microservicio OpenAI
 
-Este proyecto está formado por **una app principal PHP (Clean Marvel Album)** y **un microservicio separado** que se encarga de hablar con la API de OpenAI para generar las historias de los cómics.
+Proyecto de demostración de **arquitectura limpia (Clean Architecture)** y **buenas prácticas en PHP 8.2**, dividido en dos capas principales:
 
-El objetivo: desde la app principal seleccionas héroes → pulsas **“Generar cómic”** → la app llama al microservicio → el microservicio llama a OpenAI → devuelve la historia → la app la muestra.
+1. **Clean Marvel Album (App principal)** → frontend + backend modular.
+2. **OpenAI Service (Microservicio)** → servicio separado, responsable de la generación de historias mediante la API de OpenAI.
 
 ---
 
-## Estructura del proyecto
+## 🧱 Principios y objetivos
 
-```
+Este proyecto forma parte de un entorno de aprendizaje orientado a la aplicación real de **Clean Architecture**, **SOLID**, **PSR-4**, y **segregación por capas**:
+
+- **Independencia del Framework**  
+  La app y el microservicio no dependen de ningún framework externo.
+- **Inversión de dependencias (DIP)**  
+  La capa de dominio no conoce detalles de infraestructura.
+- **Responsabilidad única (SRP)**  
+  Cada clase tiene un propósito claro (Router, Controller, Service, etc.).
+- **Comunicación por interfaz / puerto-adaptador**  
+  El microservicio usa un adaptador HTTP simple (cURL) para conectar con OpenAI.
+
+---
+
+## 🧩 Estructura del repositorio
+
+```bash
 .
-├── clean-marvel/               # App principal (frontend + backend PHP)
-│   ├── public/                 # index.php → se sirve en http://localhost:8080
-│   └── src/
+├── clean-marvel/                   # App principal (MVC simple)
+│   ├── src/                        # Código de dominio, aplicación e infraestructura
+│   ├── public/                     # Punto de entrada → http://localhost:8080
+│   ├── composer.json
+│   └── tests/
 │
-└── clean-marvel/openai-service/ # Microservicio de IA (PHP)
-    ├── public/                 # index.php → se sirve en http://localhost:8081
-    └── src/
+└── clean-marvel/openai-service/    # Microservicio independiente
+    ├── src/                        # Controladores y servicios (PSR-4)
+    ├── public/                     # Punto de entrada → http://localhost:8081
+    ├── .env                        # Clave API de OpenAI (no se sube al repo)
+    └── composer.json
 ```
 
 ---
 
-## Requisitos
+## ⚙️ Flujo técnico
 
-- PHP 8.2+
-- Composer
-- Cuenta de OpenAI y **API key**
-- (Opcional) VS Code con `.vscode/tasks.json` para levantar los dos servers
-
----
-
-## Instalación
-
-1. Clonar el repo
-2. Instalar dependencias del proyecto principal:
-
-   ```bash
-   cd clean-marvel
-   composer install
-   ```
-
-3. Instalar dependencias del microservicio:
-
-   ```bash
-   cd openai-service
-   composer install
-   ```
+1. El usuario selecciona héroes en la app principal (8080).  
+2. La app envía una petición `POST /comics/generate`.  
+3. El backend hace un `curl` al microservicio (8081).  
+4. El microservicio llama a `https://api.openai.com/v1/chat/completions`.  
+5. OpenAI devuelve la historia → el micro responde con JSON.  
+6. La app muestra el cómic generado.
 
 ---
 
-## Configuración del microservicio (`openai-service/`)
+## 📄 Requerimientos técnicos y despliegue
 
-El microservicio necesita una **API key** de OpenAI.
+Para levantar correctamente los servidores, instalar dependencias y configurar entornos:
 
-1. Crear el archivo:
+👉 **Consulta el archivo [`/docs/requirements.md`](./docs/requirements.md)**  
 
-   ```bash
-   cd clean-marvel/openai-service
-   cp .env.example .env   # si lo tienes, si no créalo
-   ```
-
-2. Dentro de `.env` poner:
-
-   ```env
-   OPENAI_API_KEY=sk-tu-clave-real
-   ```
-
-3. El archivo `.env` **NO se sube** a GitHub. Ya está añadido en `.gitignore`.
-
-4. El archivo `public/index.php` ya está preparado para **cargar el `.env` manualmente** (lee línea por línea y hace `putenv()`), por lo que no hace falta exportar la variable cada vez.
+Ahí se detallan:
+- Dependencias mínimas (PHP, Composer, cURL)  
+- Configuración de entorno (`.env`)  
+- Scripts y tasks de VS Code  
+- Ejemplos de uso (`curl`, endpoints)  
+- Estructura de capas y patrones aplicados  
 
 ---
 
-## Cómo levantar los dos servidores
+## 🧰 Buenas prácticas aplicadas
 
-### 1. App principal (8080)
-
-Desde `clean-marvel/`:
-
-```bash
-php -S localhost:8080 -t public
-```
-
-Esto abre la app donde están los héroes y el botón **“Generar cómic”**.
+- Estructura modular (Domain / Application / Infrastructure / Presentation)
+- PSR-4 en ambas aplicaciones
+- `composer dump-autoload` tras mover o crear clases
+- Manejo de errores con respuestas JSON controladas
+- Separación de responsabilidades entre app principal y microservicio
+- Carga manual de `.env` mediante `putenv()` para seguridad
 
 ---
 
-### 2. Microservicio OpenAI (8081)
+## ✍️ Autor
 
-En otra terminal:
+Proyecto desarrollado por **Martín Pallante**, con la colaboración de **Alfred**, asistente de IA.  
 
-```bash
-cd clean-marvel/openai-service
-php -S localhost:8081 -t public
-```
-
-⚠️ Importante: el microservicio debe estar levantado **antes** de darle a “Generar cómic”, porque la app principal le hace un `curl` a:
-
-```
-http://localhost:8081/v1/chat
-```
-
-Si el 8081 no está levantado, la app principal devuelve `502 Bad Gateway` y el frontend muestra “La IA devolvió una estructura inesperada”.
-
----
-
-## Cómo funciona el flujo
-
-1. El usuario hace clic en **“Generar cómic”** en la app (8080).
-2. La app (8080) hace un `POST /comics/generate` a su propio backend.
-3. El backend de la app hace una llamada HTTP al **microservicio**:
-
-   ```bash
-   POST http://localhost:8081/v1/chat
-   Content-Type: application/json
-
-   {
-     "messages": [
-       { "role": "system", "content": "Eres un narrador de cómics de Marvel en español." },
-       { "role": "user", "content": "Crea una escena épica entre Iron Man y Capitán América." }
-     ]
-   }
-   ```
-
-4. El microservicio recibe eso, llama a:
-
-   ```text
-   https://api.openai.com/v1/chat/completions
-   ```
-
-   usando la `OPENAI_API_KEY` del `.env`.
-
-5. OpenAI devuelve la historia.
-6. El microservicio responde SIEMPRE JSON al proyecto principal:
-
-   ```json
-   {
-     "ok": true,
-     "content": "Iron Man sobrevolaba Nueva York..."
-   }
-   ```
-
-7. La app principal pinta el cómic.
-
----
-
-## Endpoints del microservicio
-
-- **POST** `/v1/chat` → endpoint principal
-  - Body:
-    ```json
-    {
-      "messages": [
-        { "role": "system", "content": "..." },
-        { "role": "user", "content": "..." }
-      ]
-    }
-    ```
-  - Respuesta OK:
-    ```json
-    {
-      "ok": true,
-      "content": "historia generada..."
-    }
-    ```
-  - Respuesta error controlado:
-    ```json
-    {
-      "ok": false,
-      "error": "⚠️ OpenAI no respondió..."
-    }
-    ```
-
-- **GET** `/health` → opcional, para saber si el microservicio está vivo
-  ```json
-  { "ok": true, "service": "openai-service" }
-  ```
-
----
-
-## Dependencias principales
-
-### App principal (`clean-marvel/`)
-
-- PHP 8.2
-- composer.json (PSR-4, router propio)
-- PHPUnit (tests)
-- PHPStan (análisis)
-
-### Microservicio (`openai-service/`)
-
-- PHP 8.2
-- cURL habilitado (para llamar a OpenAI)
-- `.env` local (no se sube)
-- Autoload PSR-4:
-  ```json
-  "autoload": {
-    "psr-4": {
-      "Creawebes\\OpenAI\\": "src/"
-    }
-  }
-  ```
-
-Después de crear / mover clases:
-
-```bash
-composer dump-autoload
-```
-
----
-
-## VS Code: tasks
-
-En `.vscode/tasks.json` se pueden definir 2 tasks:
-
-- **“🚀 Iniciar servidor PHP (8080)”** → sirve `clean-marvel/public`
-- **“🤖 Run OpenAI Service (8081)”** → sirve `clean-marvel/openai-service/public`
-- **“▶️ Run Both (8080 + 8081)”** → los dos en paralelo
-
-*(si este archivo se sube a GitHub, NO pongas la API key dentro del task)*
-
----
-
-## Notas de seguridad
-
-- **No subas** el archivo `.env`
-- **No pongas** la API key dentro del código PHP
-- **No pongas** la API key en `tasks.json` si el repo es público
-- Si alguien clona el proyecto, debe crear su propio `.env` en `openai-service/`
-
----
-
-## Problemas comunes
-
-- **502 Bad Gateway al generar cómic** → el microservicio (8081) no está levantado.
-- **“⚠️ No se ha configurado OPENAI_API_KEY…”** → el `.env` existe pero no se está cargando → revisar `public/index.php` del microservicio.
-- **“La IA devolvió una estructura inesperada”** → el microservicio devolvió HTML o un error en vez de JSON → revisar que no haya `echo` de debug.
-- **“Class ... not found”** → falta `composer dump-autoload` o el namespace no coincide.
-
-✍️ Autor
-
-Proyecto desarrollado por **Martín Pallante**  
-con la colaboración de **Alfred**, asistente de IA.  
-
-[🌐 Creawebes](https://www.creawebes.com) · © 2025  
-
+[
 > “Diseñando tecnología limpia, modular y con propósito.”
