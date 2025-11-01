@@ -126,6 +126,12 @@ final class Album
 
     private function touch(): void
     {
-        $this->updatedAt = new DateTimeImmutable();
+        $now = new DateTimeImmutable();
+
+        if ($now <= $this->updatedAt) {
+            $now = $this->updatedAt->modify('+1 microsecond');
+        }
+
+        $this->updatedAt = $now;
     }
 }

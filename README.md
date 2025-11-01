@@ -1,6 +1,7 @@
 # Clean Marvel Album – Arquitectura Clean en PHP 8.2
 
-**Clean Marvel Album** es una aplicación web desarrollada en **PHP 8.2** que implementa los principios de **Arquitectura Limpia (Clean Architecture)** y **Diseño Guiado por el Dominio (DDD)**. El sistema permite gestionar álbumes de cromos de Marvel y añadir héroes a ellos, sirviendo como un proyecto de referencia para construir software mantenible, escalable y desacoplado.
+**Clean Marvel Album** es una aplicación web desarrollada en **PHP 8.2** que implementa los principios de **Arquitectura Limpia (Clean Architecture)** y **Diseño Guiado por el Dominio (DDD)**.  
+El sistema permite gestionar álbumes de cromos de Marvel y añadir héroes a ellos, sirviendo como un proyecto de referencia para construir software mantenible, escalable y desacoplado.
 
 ---
 
@@ -10,16 +11,16 @@ El proyecto sigue una estricta separación de capas, garantizando que la lógica
 
 ```
 ┌──────────────────┐
-│  Presentation    │ (index.php, views/*.php)
-└────────┬─────────┘
+│  Presentation     │ (index.php, Controllers, views/*.php)
+└────────┬──────────┘
          │
 ┌────────▼────────┐
-│  Application     │ (Use Cases, DTOs)
-└────────┬─────────┘
+│  Application     │ (Use Cases, DTOs, Services)
+└────────┬────────┘
          │
 ┌────────▼────────┐
 │  Domain          │ (Entities, Repositories, Events)
-└────────┬─────────┘
+└────────┬────────┘
          │
 ┌────────▼────────┐
 │  Infrastructure  │ (Persistence, EventBus Impl.)
@@ -29,138 +30,99 @@ El proyecto sigue una estricta separación de capas, garantizando que la lógica
 ### Componentes Clave
 
 - **Capas (Domain, Application, Infrastructure)**: Cada módulo (`Albums`, `Heroes`, `Notifications`) está organizado internamente siguiendo esta estructura.
-- **EventBus In-Memory**: Un bus de eventos síncrono (`InMemoryEventBus`) desacopla la lógica de negocio de los efectos secundarios. Por ejemplo, al crear un héroe, se publica un `HeroCreated` que es capturado por un manejador de notificaciones.
-- **Persistencia en JSON**: Como prueba de concepto (MVP), la persistencia se implementa con archivos JSON. El diseño permite un reemplazo sencillo a un motor como **SQLite** o **MySQL** con solo implementar una nueva clase de repositorio.
-- **Inyección de Dependencias**: El `bootstrap.php` centraliza el "cableado" de dependencias, facilitando la gestión y el intercambio de implementaciones.
+- **EventBus In-Memory**: Un bus de eventos síncrono (`InMemoryEventBus`) desacopla la lógica de negocio de los efectos secundarios.
+- **Persistencia en JSON (MVP)**: Implementación simple que puede migrarse fácilmente a **SQLite** o **MySQL**.
+- **Inyección de Dependencias**: El archivo `bootstrap.php` centraliza el “cableado” de dependencias.
+- **Autoload PSR-4**: Configurado en `composer.json` para el namespace `Src\`, lo que permite cargar automáticamente clases dentro de `src/`.
 
-### Estructura de Carpetas
+---
+
+## Estructura de Carpetas
 
 ```
 clean-marvel/
 ├── public/
-│   ├── assets/             # CSS y JS modular (ES Modules) para la UI
-│   └── index.php           # Front controller y router HTTP (HTML + JSON)
+│   ├── assets/             # CSS y JS modular (UI)
+│   ├── uploads/            # Archivos subidos
+│   └── index.php           # Punto de entrada (router principal)
 │
 ├── src/
 │   ├── bootstrap.php       # Inyección de dependencias
+│   ├── Controllers/        # Controladores HTTP (Presentation Layer)
+│   │   ├── AlbumController.php
+│   │   ├── HeroController.php
+│   │   └── ComicController.php
 │   ├── Albums/             # Módulo de Álbumes (Domain, App, Infra)
 │   ├── Heroes/             # Módulo de Héroes (Domain, App, Infra)
 │   ├── Notifications/      # Módulo de Notificaciones
-│   └── Shared/             # Componentes compartidos (EventBus, JsonResponse)
+│   └── Shared/             # Componentes compartidos (EventBus, Router, etc.)
 │
 ├── storage/
 │   ├── albums.json         # Base de datos de álbumes
 │   ├── heroes.json         # Base de datos de héroes
-│   └── notifications.log   # Log de notificaciones (usado por la UI)
+│   └── notifications.log   # Log de notificaciones
 │
-├── tests/
-│   ├── Doubles/            # Repositorios "dobles" para tests
-│   └── ...                 # Tests unitarios y de aplicación
+├── tests/                  # PHPUnit tests
+│   └── ...
 │
-├── .env                    # Archivo de configuración (no versionado)
-├── composer.json           # Dependencias PHP
+├── composer.json           # Dependencias y autoload PSR-4
 └── phpunit.xml.dist        # Configuración de PHPUnit
 ```
 
 ---
 
-## Endpoints de la API
+## 🧰 Automatización y Tasks de VS Code
 
-La API REST gestiona todos los recursos del sistema y es consumida por las interfaces de usuario.
+El proyecto incluye un archivo `.vscode/tasks.json` con tareas automatizadas que facilitan desarrollo, pruebas y despliegue.
 
-| Método | Endpoint                      | Descripción                                     |
-|--------|-------------------------------|-------------------------------------------------|
-| `GET`  | `/albums`                     | Lista todos los álbumes creados.                |
-| `POST` | `/albums`                     | Crea un nuevo álbum.                            |
-| `DELETE`| `/albums/{albumId}`           | Elimina un álbum y todos sus héroes asociados.  |
-| `GET`  | `/albums/{albumId}/heroes`    | Lista los héroes de un álbum específico.        |
-| `POST` | `/albums/{albumId}/heroes`    | Añade un nuevo héroe a un álbum.                |
-| `DELETE`| `/heroes/{heroId}`            | Elimina un héroe específico.                    |
-| `GET`  | `/notifications`              | Obtiene el log de notificaciones en tiempo real.|
-| `POST` | `/comics/generate`            | Genera un cómic IA con héroes seleccionados.    |
-| `POST` | `/dev/tests/run`              | Ejecuta PHPUnit (solo entorno local).           |
-| `DELETE`| `/notifications`             | Limpia el log de notificaciones.                |
-
----
-
-## Interfaces de Usuario (UI)
-
-Las vistas se renderizan desde `public/index.php` usando las plantillas PHP ubicadas en `views/`. Cada vista carga módulos JS desde `public/assets/` que consumen la API.
-
-### `/albums`
-- **Crear álbumes**: Formulario para añadir nuevos álbumes y subir portadas (URL o archivo).
-- **Listar, editar y eliminar álbumes**: Grid con filtros/orden y acciones de borrado. Incluye panel de actividad y ejecución de tests (`/dev/tests/run`).
-- **Acceso a héroes**: Navega a `/heroes` con parámetros del álbum seleccionado.
-
-### `/heroes`
-- **Crear héroes**: Formulario asociado al álbum recibido por query string (`albumId`, `albumName`).
-- **Listar, editar y eliminar héroes**: Tarjetas con modo edición inline y registro de actividad local.
-- **Notificaciones en vivo**: Muestra actividad basada en eventos publicados y almacenados en `notifications.log`.
-
-### `/comic`
-- **Selección de héroes global** para generar cómics con IA.
-- **Generación de historia** mediante `POST /comics/generate`, mostrando viñetas y slideshow con los héroes elegidos.
-
----
-
-## Tests
-
-El proyecto utiliza **PHPUnit** para garantizar la calidad y el correcto funcionamiento de la lógica de negocio y la infraestructura.
-
-### Ejecutar Tests
-
-Para correr la suite de tests, ejecuta:
-```bash
-composer test
-```
-
-El resultado esperado es:
-```
-OK (10 tests, 25 assertions)
-```
-
----
-
-## Ejecución en Local
-
-Sigue estos pasos para levantar el proyecto en tu máquina.
-
-**1. Instalar dependencias:**
-```bash
-composer install
-```
-
-**2. Iniciar el servidor web de PHP:**
+### 🚀 Servidor de desarrollo
+Inicia el servidor PHP embebido:
 ```bash
 php -S localhost:8080 -t public
 ```
 
-**3. Acceder a la aplicación:**
-Abre tu navegador y visita [http://localhost:8080/](http://localhost:8080/) (o directamente `/albums`, `/heroes`, `/comic`).
-
----
-
-## Comandos Útiles
-
-### Limpiar Datos
-Si necesitas empezar desde cero, puedes borrar los archivos de almacenamiento con este comando:
+### 🧪 Ejecución de tests PHPUnit
+Corre toda la suite con colores y formato TestDox:
 ```bash
-rm storage/*.json storage/notifications.log
+vendor/bin/phpunit --colors=always --testdox
 ```
 
+### 🔍 Análisis estático con PHPStan
+Evalúa errores de tipo y buenas prácticas:
+```bash
+vendor/bin/phpstan analyse --memory-limit=512M
+```
+
+### ⚙️ Validar composer.json
+Verifica la configuración de dependencias:
+```bash
+composer validate
+```
+
+### 🧪 QA completo (tests + phpstan + composer)
+Ejecuta las tres tareas anteriores en secuencia automática:
+1. PHPUnit  
+2. PHPStan  
+3. Composer validate  
+
+Todo desde:
+```bash
+⇧⌘P → Run Task → “🧪 QA completo (tests + phpstan + composer)”
+```
+
+### ⬆️ Git: add + commit + push (actualiza ambos README)
+Ejecuta una subida automatizada, sincronizando el README de `clean-marvel` con el README raíz y sube cambios al repositorio.
+
+### 🧹 Git: limpiar archivos eliminados
+Detecta y elimina del repositorio cualquier archivo borrado localmente:
+```bash
+git add -u && git commit -m "remove deleted files" && git push
+```
+
+Estas tareas permiten desarrollar, probar y subir código a GitHub sin salir de VS Code, manteniendo la coherencia entre el proyecto local y el repositorio remoto.
+
 ---
-🔜 Próximos pasos:
-
-Separar los controladores del index.php
-
-Crear un microservicio en PHP para hablar con OpenAI
-
-Otro microservicio para el sistema RAG (vectorización + recuperación)
-
-Añadir un login seguro por usuarios
-
-Pasar de JSON a SQLite/MySQL sin romper la estructura limpia
 
 ## Autor
 
-Luis Martín Pallante
+**Luis Martín Palllante & Alfred – Asistente copiloto IA**

@@ -4,9 +4,10 @@ declare(strict_types=1);
 
 use App\AI\OpenAIComicGenerator;
 use App\Albums\Application\UseCase\CreateAlbumUseCase;
-use App\Albums\Application\UseCase\UpdateAlbumUseCase;
 use App\Albums\Application\UseCase\DeleteAlbumUseCase;
+use App\Albums\Application\UseCase\FindAlbumUseCase;
 use App\Albums\Application\UseCase\ListAlbumsUseCase;
+use App\Albums\Application\UseCase\UpdateAlbumUseCase;
 use App\Heroes\Application\UseCase\SeedAlbumHeroesUseCase;
 use App\Albums\Infrastructure\Persistence\FileAlbumRepository;
 use App\Dev\Seed\SeedHeroesService;
@@ -70,6 +71,7 @@ return (static function (): array {
             'updateAlbum' => new UpdateAlbumUseCase($albumRepository, $eventBus),
             'listAlbums' => new ListAlbumsUseCase($albumRepository),
             'deleteAlbum' => new DeleteAlbumUseCase($albumRepository, $heroRepository),
+            'findAlbum' => new FindAlbumUseCase($albumRepository),
             'createHero' => $createHeroUseCase,
             'listHeroes' => new ListHeroesUseCase($heroRepository),
             'findHero' => new FindHeroUseCase($heroRepository),
