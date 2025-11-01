@@ -138,9 +138,9 @@ Ejecuta PHPUnit → PHPStan → Composer validate en un solo click desde VS Code
 
 ### ⬆️ Git: add + commit + push
 Task que ya tenés armado para:
-1. copiar el README del proyecto al root
-2. hacer `git add -A`
-3. hacer `git commit -m "update clean-marvel + sync README root"`
+1. copiar el README del proyecto al root  
+2. hacer `git add -A`  
+3. hacer `git commit -m "update clean-marvel + sync README root"`  
 4. hacer `git push`
 
 Esto queda documentado para que otro dev sepa que **no es un push manual**, sino un task estandarizado.
@@ -180,6 +180,57 @@ php -S localhost:8080 -t public
 
 ---
 
+## 8. Dependencias y carpeta `vendor/`
+
+Este proyecto utiliza **Composer** para gestionar dependencias.  
+Por buenas prácticas, la carpeta `vendor/` **no se incluye en el repositorio** porque contiene cientos de archivos externos que se pueden reinstalar fácilmente con Composer.
+
+Solo los archivos `composer.json` y `composer.lock` se versionan para garantizar que todos los desarrolladores instalen exactamente las mismas librerías.
+
+### 🧩 Instrucciones
+
+Después de clonar el repositorio, ejecutá:
+
+```bash
+composer install
+```
+
+Este comando:
+- Descargará automáticamente todas las dependencias declaradas en `composer.json`.
+- Creará la carpeta `vendor/` en tu entorno local.
+- Generará el autoload PSR-4 necesario para ejecutar la app.
+
+> ⚠️ Si intentás ejecutar el proyecto sin la carpeta `vendor/`, obtendrás errores de clase no encontrada (`Class not found`) o autoload fallido.  
+> Simplemente corré `composer install` para resolverlo.
+
+---
+
+## 9. Archivo `.env` y claves API
+
+El archivo `.env` se utiliza para **guardar configuraciones sensibles** (como claves API, tokens o credenciales).  
+Por motivos de seguridad, **no debe subirse al repositorio**.
+
+### 🔒 Ejemplo de `.env`
+
+```bash
+# Configuración del entorno
+APP_ENV=local
+APP_DEBUG=true
+
+# Clave API de OpenAI (ejemplo)
+OPENAI_API_KEY=sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+```
+
+### 🧭 Cómo usarlo
+1. Copiá el ejemplo de `.env` a un nuevo archivo:
+   ```bash
+   cp .env.example .env
+   ```
+2. Reemplazá los valores por tus claves reales.  
+3. Asegurate de que `.env` está incluido en `.gitignore` para no subirlo nunca al repositorio.
+
+---
+
 ## Autor
 
-**Luis Martín Palllante & Alfred – asistente copiloto IA**
+**Luis Martín Pallante & Alfred – asistente copiloto IA**
